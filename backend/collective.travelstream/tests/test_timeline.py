@@ -161,3 +161,64 @@ class TestTimelineService:
     def test_anonymous_gets_no_private_timeline(self, trips_area, anon_request):
         r = anon_request.get("/trips/alps/@travel-timeline")
         assert r.status_code in (401, 404)
+
+
+class TestNoteType:
+    """Ticket 03: Notes are first-class timeline citizens."""
+
+    def test_note_addable_in_trip_with_body(self, trips_area, manager_request):
+        r = manager_request.post(
+            "/trips/alps",
+            json={
+                "@type": "Note",
+                "title": "Thought",
+                "text": "The pass was foggy all morning.",
+                "captured_at": "2026-07-02T15:00:00",
+                "latitude": 46.55,
+                "longitude": 8.56,
+            },
+        )
+        assert r.status_code == 201, r.text
+        note = r.json()
+        assert note["text"] == "The pass was foggy all morning."
+        assert note["captured_at"].startswith("2026-07-02T15:00:00")
+
+    def test_note_ordered_among_photos_and_videos(self, trips_area, manager_request):
+        manager_request.post(
+            "/trips/alps",
+            json={
+                "@type": "Note",
+                "title": "Thought",
+                "captured_at": "2026-07-02T15:00:00",
+            },
+        )
+        items = manager_request.get("/trips/alps/@travel-timeline").json()["items"]
+        titles = [i["title"] for i in items]
+        assert titles == ["first", "clip", "Thought", "second", "third"]
+        kinds = {i["title"]: i["kind"] for i in items}
+        assert kinds["Thought"] == "note"
+
+    def test_note_kind_filter(self, trips_area, manager_request):
+        manager_request.post(
+            "/trips/alps", json={"@type": "Note", "title": "Only note"}
+        )
+        items = manager_request.get(
+            "/trips/alps/@travel-timeline?kind=note"
+        ).json()["items"]
+        assert [i["title"] for i in items] == ["Only note"]
+
+    def test_note_captured_at_falls_back_to_creation(self, trips_area, manager_request):
+        r = manager_request.post(
+            "/trips/alps", json={"@type": "Note", "title": "No time"}
+        )
+        assert r.status_code == 201
+        items = manager_request.get(
+            "/trips/alps/@travel-timeline?kind=note"
+        ).json()["items"]
+        assert items[0]["captured_at"] is not None
+
+    def test_note_not_addable_outside_allowed_containers(self, manager_request):
+        r = manager_request.post(
+            "/", json={"@type": "Note", "title": "Rootless note"}
+        )
+        assert r.status_code in (400, 403)

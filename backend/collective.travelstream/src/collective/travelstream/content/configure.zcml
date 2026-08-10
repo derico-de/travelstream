@@ -9,4 +9,10 @@
       provides=".trip.ITrip"
       />
 
+  <plone:behavior
+      title="INote"
+      description="A quick text note captured on the road"
+      provides=".note.INote"
+      />
+
 </configure>

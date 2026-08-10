@@ -3,4 +3,5 @@
   <object name="Trip" meta_type="Dexterity FTI"/>
   <object name="Image" meta_type="Dexterity FTI"/>
   <object name="File" meta_type="Dexterity FTI"/>
+  <object name="Note" meta_type="Dexterity FTI"/>
 </object>

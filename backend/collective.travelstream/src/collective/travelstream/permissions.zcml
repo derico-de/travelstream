@@ -7,6 +7,12 @@
   <!-- -*- extra stuff goes here -*- -->
 
     <permission
+        id="collective.travelstream.AddNote"
+        title="collective.travelstream: Add Note"
+    />
+
+
+    <permission
         id="collective.travelstream.AddTrip"
         title="collective.travelstream: Add Trip"
     />
