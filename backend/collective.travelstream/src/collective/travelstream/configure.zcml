@@ -47,4 +47,7 @@
 
   <include package=".services" />
 
+
+  <include package=".subscribers" />
+
 </configure>

@@ -75,6 +75,7 @@ content_types = ["Trip", "Note"]
 behaviors = ["ITravelCaptured", "ITravelGeolocation"]
 services = ["@travel-timeline"]
 indexers = ["captured_at", "latitude", "longitude"]
+subscribers = ["extract_exif_metadata"]
 
 [tool.plone.project.settings]
 plone_version = "6.1.5"

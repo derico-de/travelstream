@@ -1,0 +1,18 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    i18n_domain="collective.travelstream">
+
+  <subscriber
+      for="plone.app.contenttypes.interfaces.IImage
+           zope.lifecycleevent.interfaces.IObjectAddedEvent"
+      handler=".extract_exif_metadata.handler"
+      />
+
+  <!-- Re-extract on replace/edit of the image -->
+  <subscriber
+      for="plone.app.contenttypes.interfaces.IImage
+           zope.lifecycleevent.interfaces.IObjectModifiedEvent"
+      handler=".extract_exif_metadata.handler"
+      />
+
+</configure>
