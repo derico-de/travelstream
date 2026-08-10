@@ -33,6 +33,7 @@
   <property name="behaviors">
     <element value="plone.basic"/>
     <element value="plone.leadimage"/>
+    <element value="collective.travelstream.geolocation"/>
     <element value="plone.namefromtitle"/>
     <element value="plone.allowdiscussion"/>
     <element value="plone.excludefromnavigation"/>

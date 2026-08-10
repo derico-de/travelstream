@@ -1,0 +1,14 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="collective.travelstream">
+
+  <plone:service
+      method="GET"
+      for="plone.dexterity.interfaces.IDexterityContainer"
+      factory=".travel_timeline.TravelTimelineService"
+      name="@travel-timeline"
+      permission="zope2.View"
+      />
+
+</configure>

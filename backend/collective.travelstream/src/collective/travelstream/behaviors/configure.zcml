@@ -1,0 +1,20 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="collective.travelstream">
+
+  <plone:behavior
+      name="collective.travelstream.captured"
+      title="Travel: captured"
+      description="Marks an object as a travel timeline member and stores its capture time"
+      provides=".itravelcaptured.ITravelCaptured"
+      />
+
+  <plone:behavior
+      name="collective.travelstream.geolocation"
+      title="Travel: geolocation"
+      description="Latitude/longitude position of a captured travel object"
+      provides=".itravelgeolocation.ITravelGeolocation"
+      />
+
+</configure>

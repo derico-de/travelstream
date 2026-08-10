@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Enable the travel behaviors on stock Image (site-wide change, documented
+     in the spec): every Image gains captured_at + geolocation fields. -->
+<object name="Image" meta_type="Dexterity FTI" purge="False">
+  <property name="behaviors" purge="False">
+    <element value="collective.travelstream.captured"/>
+    <element value="collective.travelstream.geolocation"/>
+  </property>
+</object>

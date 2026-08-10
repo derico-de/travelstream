@@ -2,4 +2,14 @@
 <object name="portal_catalog" meta_type="Plone Catalog Tool">
 <!-- -*- extra stuff goes here -*- -->
 
+  <index name="captured_at" meta_type="DateIndex">
+    <property name="index_naive_time_as_local">True</property>
+  </index>
+  <index name="latitude" meta_type="FieldIndex">
+    <indexed_attr value="latitude"/>
+  </index>
+  <index name="longitude" meta_type="FieldIndex">
+    <indexed_attr value="longitude"/>
+  </index>
+
 </object>

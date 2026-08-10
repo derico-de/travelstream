@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Enable the travel behaviors on stock File (site-wide change, documented
+     in the spec). plone.leadimage is enabled so the ffmpeg worker can write
+     the video poster frame there - thumbnails are uniformly image scales. -->
+<object name="File" meta_type="Dexterity FTI" purge="False">
+  <property name="behaviors" purge="False">
+    <element value="collective.travelstream.captured"/>
+    <element value="collective.travelstream.geolocation"/>
+    <element value="plone.leadimage"/>
+  </property>
+</object>

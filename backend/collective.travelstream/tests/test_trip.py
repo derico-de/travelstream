@@ -7,23 +7,25 @@ import pytest
 
 PARTNER = {"username": "partner", "password": "correct horse battery"}
 
-# 1x1 transparent PNG
-PIXEL_PNG = base64.b64encode(
-    base64.b16decode(
-        "89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C489"
-        "0000000D4944415478DA63FCCFC0F01F0005050101E9E94A340000000049454E44AE426082"
-    )
-).decode("ascii")
+
+def png_bytes(size=(400, 300), color=(120, 180, 200)):
+    from io import BytesIO
+
+    from PIL import Image as PILImage
+
+    buffer = BytesIO()
+    PILImage.new("RGB", size, color).save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
-def image_payload(title="A photo"):
+def image_payload(title="A photo", data=None):
     return {
         "@type": "Image",
         "title": title,
         "image": {
-            "data": PIXEL_PNG,
+            "data": base64.b64encode(data or png_bytes()).decode("ascii"),
             "encoding": "base64",
-            "filename": "pixel.png",
+            "filename": f"{title}.png",
             "content-type": "image/png",
         },
     }
