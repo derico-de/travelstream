@@ -3,11 +3,13 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { authenticated, keepSessionFresh, logout } from '$lib/session';
+  import { startOutboxDraining } from '$lib/outbox';
 
   let { children } = $props();
 
   onMount(() => {
     keepSessionFresh();
+    startOutboxDraining();
     if (!$authenticated && $page.url.pathname !== '/login') {
       goto('/login');
     }
@@ -23,6 +25,7 @@
     <header class="topbar">
       <a href="/" class="brand">Travelstream</a>
       <nav>
+        <a href="/capture">Capture</a>
         <a href="/outbox">Outbox</a>
         <button class="linklike" onclick={() => logout()}>Log out</button>
       </nav>
