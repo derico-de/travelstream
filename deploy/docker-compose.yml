@@ -1,0 +1,73 @@
+# Travelstream self-hosted stack: one file, four services.
+#
+#   backend  - single Plone instance, plain filestorage + blobstorage
+#              (no ZEO/relstorage: only this process touches the ZODB;
+#              the worker talks restapi only)
+#   web      - nginx serving the PWA statics and proxying the REST API
+#              under the same origin (no CORS in the browser)
+#   worker   - ffmpeg media worker (poster frame + faststart remux)
+#   backup   - scheduled repozo + blobstorage snapshots
+#
+# First run:
+#   cp .env.example .env   # set passwords
+#   docker compose up -d
+#   # create the site once: http://localhost:8080 -> "Create a new Plone site"
+#   # with id "Plone", then install the "Travelstream" add-on.
+
+services:
+  backend:
+    image: plone/plone-backend:6.1.5
+    restart: unless-stopped
+    environment:
+      SITE: Plone
+      # Install our add-on from the mounted source checkout
+      DEVELOP: /app/src/collective.travelstream
+      PROFILES: collective.travelstream:default
+    volumes:
+      - ../backend/collective.travelstream:/app/src/collective.travelstream:ro
+      - filestorage:/data/filestorage
+      - blobstorage:/data/blobstorage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/ok || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../frontend/build:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+  worker:
+    build: ../worker
+    restart: unless-stopped
+    environment:
+      PLONE_URL: http://backend:8080/Plone
+      PLONE_USER: ${WORKER_USER:-admin}
+      PLONE_PASSWORD: ${WORKER_PASSWORD:-admin}
+      POLL_SECONDS: "15"
+    depends_on:
+      - backend
+
+  backup:
+    image: plone/plone-backend:6.1.5
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
+      KEEP_DAYS: "${BACKUP_KEEP_DAYS:-30}"
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - filestorage:/data/filestorage:ro
+      - blobstorage:/data/blobstorage:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+
+volumes:
+  filestorage:
+  blobstorage:
