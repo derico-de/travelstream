@@ -1,3 +1,4 @@
 .devshell.json
 .scratch/
 node_modules/
+.pnpm-store/
