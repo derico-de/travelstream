@@ -39,4 +39,14 @@
       name="SearchableText"
       />
 
+  <adapter
+      factory=".processing_status.dummy"
+      name="processing_status"
+      />
+
+  <adapter
+      factory=".processing_status.processing_status"
+      name="processing_status"
+      />
+
 </configure>

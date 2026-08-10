@@ -1,0 +1,33 @@
+"""Tests for processing_status indexer."""
+import pytest
+from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+
+from collective.travelstream.testing import INTEGRATION_TESTING
+
+
+class TestIndexerProcessingStatus:
+    """Test processing_status indexer."""
+
+    layer = INTEGRATION_TESTING
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, integration):
+        self.portal = integration["portal"]
+        setRoles(self.portal, TEST_USER_ID, ["Manager"])
+
+    def test_indexer_registered(self):
+        """Test indexer is registered as a catalog adapter."""
+        from plone.indexer.interfaces import IIndexer
+        from zope.component import queryMultiAdapter
+
+        from plone.app.contenttypes.interfaces import IDocument
+
+        doc = self.portal.invokeFactory("Document", "test-doc", title="Test")
+        doc = self.portal["test-doc"]
+        indexer = queryMultiAdapter(
+            (doc, self.portal.portal_catalog),
+            IIndexer,
+            name="processing_status",
+        )
+        assert indexer is not None

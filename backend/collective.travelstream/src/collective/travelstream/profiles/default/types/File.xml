@@ -7,5 +7,6 @@
     <element value="collective.travelstream.captured"/>
     <element value="collective.travelstream.geolocation"/>
     <element value="plone.leadimage"/>
+    <element value="collective.travelstream.processing"/>
   </property>
 </object>

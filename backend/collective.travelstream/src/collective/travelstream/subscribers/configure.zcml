@@ -15,4 +15,10 @@
       handler=".extract_exif_metadata.handler"
       />
 
+  <subscriber
+      for="plone.app.contenttypes.interfaces.IFile
+           zope.lifecycleevent.interfaces.IObjectAddedEvent"
+      handler=".mark_video_processing.handler"
+      />
+
 </configure>

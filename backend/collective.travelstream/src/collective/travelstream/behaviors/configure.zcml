@@ -24,4 +24,11 @@
       provides=".itravelarticle.ITravelArticle"
       />
 
+  <plone:behavior
+      name="collective.travelstream.processing"
+      title="Travel: media processing"
+      description="Media processing status of a travel video (worker contract)"
+      provides=".itravelprocessing.ITravelProcessing"
+      />
+
 </configure>

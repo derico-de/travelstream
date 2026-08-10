@@ -11,5 +11,8 @@
   <index name="longitude" meta_type="FieldIndex">
     <indexed_attr value="longitude"/>
   </index>
+  <index name="processing_status" meta_type="FieldIndex">
+    <indexed_attr value="processing_status"/>
+  </index>
 
 </object>
