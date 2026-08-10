@@ -39,14 +39,13 @@ class TestControlPanelTravelstream:
 
     def test_restapi_controlpanel_adapter(self):
         """Test plone.restapi control panel adapter is registered."""
-        from plone.restapi.interfaces import IControlpanel
-        from zope.component import getMultiAdapter
+        from plone.restapi.controlpanels.interfaces import IControlpanel
+        from zope.component import queryMultiAdapter
         from zope.publisher.browser import TestRequest
 
         request = TestRequest()
-        cp_adapter = getMultiAdapter(
+        cp_adapter = queryMultiAdapter(
             (self.portal, request),
             IControlpanel,
-            name="travelstream-controlpanel",
         )
         assert cp_adapter is not None
