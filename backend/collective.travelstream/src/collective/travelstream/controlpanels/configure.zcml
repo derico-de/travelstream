@@ -1,0 +1,20 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    i18n_domain="collective.travelstream">
+
+  <browser:page
+      name="travelstream-controlpanel"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      class=".travelstream.TravelstreamControlPanelView"
+      permission="cmf.ManagePortal"
+      />
+
+  <adapter
+      factory=".travelstream.TravelstreamControlPanelAdapter"
+      provides="plone.restapi.controlpanels.interfaces.IControlpanel"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot
+           zope.interface.Interface"
+      />
+
+</configure>

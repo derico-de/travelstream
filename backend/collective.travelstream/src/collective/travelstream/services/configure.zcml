@@ -19,4 +19,12 @@
       permission="zope2.View"
       />
 
+  <plone:service
+      method="GET"
+      for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+      factory=".travelstream_settings.TravelstreamSettingsService"
+      name="@travelstream-settings"
+      permission="zope2.View"
+      />
+
 </configure>

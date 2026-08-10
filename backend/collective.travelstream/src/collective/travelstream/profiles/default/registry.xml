@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+          i18n:domain="collective.travelstream">
+
+  <records
+      interface="collective.travelstream.controlpanels.travelstream.ITravelstreamSettings"
+      prefix="collective.travelstream"
+      />
+
+</registry>

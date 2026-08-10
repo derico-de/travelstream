@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<registry>
+
+  <records interface="collective.travelstream.controlpanels.travelstream.ITravelstreamSettings"
+           prefix="collective.travelstream.travelstream">
+  </records>
+
+</registry>
