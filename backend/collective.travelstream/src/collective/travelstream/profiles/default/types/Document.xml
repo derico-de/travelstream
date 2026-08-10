@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Enable the travel article behavior on stock Document (the default
+     article type) and render it through the ProseMirror JSON view.
+     Site-wide change, documented in the spec. -->
+<object name="Document" meta_type="Dexterity FTI" purge="False">
+  <property name="behaviors" purge="False">
+    <element value="collective.travelstream.article"/>
+  </property>
+  <property name="default_view">travel-article-view</property>
+  <property name="view_methods" purge="False">
+    <element value="travel-article-view"/>
+  </property>
+</object>

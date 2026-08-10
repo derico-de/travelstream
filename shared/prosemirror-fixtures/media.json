@@ -1,0 +1,30 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "The black beach:"
+        }
+      ]
+    },
+    {
+      "type": "travelImage",
+      "attrs": {
+        "uid": "0123456789abcdef0123456789abcdef",
+        "scale": "large",
+        "alt": "Black sand beach",
+        "caption": "Reynisfjara at noon"
+      }
+    },
+    {
+      "type": "travelVideo",
+      "attrs": {
+        "uid": "fedcba9876543210fedcba9876543210",
+        "caption": "Waves rolling in"
+      }
+    }
+  ]
+}

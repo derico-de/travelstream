@@ -72,10 +72,11 @@ zope_setup = true
 
 [tool.plone.backend_addon.settings.subtemplates]
 content_types = ["Trip", "Note"]
-behaviors = ["ITravelCaptured", "ITravelGeolocation"]
+behaviors = ["ITravelCaptured", "ITravelGeolocation", "ITravelArticle"]
 services = ["@travel-timeline", "@travel-geojson"]
-indexers = ["captured_at", "latitude", "longitude"]
+indexers = ["captured_at", "latitude", "longitude", "SearchableText"]
 subscribers = ["extract_exif_metadata"]
+views = ["travel-article-view"]
 
 [tool.plone.project.settings]
 plone_version = "6.1.5"

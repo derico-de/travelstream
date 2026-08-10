@@ -1,0 +1,40 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Before"
+        }
+      ]
+    },
+    {
+      "type": "galacticChart",
+      "attrs": {
+        "sector": "7G"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "trapped text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "After"
+        }
+      ]
+    }
+  ]
+}

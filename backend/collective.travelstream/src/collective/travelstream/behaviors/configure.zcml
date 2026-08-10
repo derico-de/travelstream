@@ -17,4 +17,11 @@
       provides=".itravelgeolocation.ITravelGeolocation"
       />
 
+  <plone:behavior
+      name="collective.travelstream.article"
+      title="Travel: article"
+      description="Canonical ProseMirror JSON document and relations to embedded travel entries"
+      provides=".itravelarticle.ITravelArticle"
+      />
+
 </configure>

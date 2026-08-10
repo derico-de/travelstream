@@ -50,4 +50,7 @@
 
   <include package=".subscribers" />
 
+
+  <include package=".views" />
+
 </configure>

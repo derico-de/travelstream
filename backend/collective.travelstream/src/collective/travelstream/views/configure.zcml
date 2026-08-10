@@ -1,0 +1,26 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    i18n_domain="collective.travelstream">
+
+  <adapter
+      factory=".form_extenders.OmitRichTextOnEdit"
+      provides="plone.z3cform.fieldsets.interfaces.IFormExtender"
+      name="collective.travelstream.omit_richtext_edit"
+      />
+
+  <adapter
+      factory=".form_extenders.OmitRichTextOnAdd"
+      provides="plone.z3cform.fieldsets.interfaces.IFormExtender"
+      name="collective.travelstream.omit_richtext_add"
+      />
+
+  <browser:page
+      name="travel-article-view"
+      for="collective.travelstream.behaviors.itravelarticle.ITravelArticle"
+      class=".travel_article_view.TravelArticleView"
+      template="travel_article_view.pt"
+      permission="zope2.View"
+      />
+
+</configure>

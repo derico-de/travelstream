@@ -1,0 +1,77 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Day one in Reykjavik"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "We landed in "
+        },
+        {
+          "type": "text",
+          "text": "thick fog",
+          "marks": [
+            {
+              "type": "bold"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " and drove "
+        },
+        {
+          "type": "text",
+          "text": "south",
+          "marks": [
+            {
+              "type": "italic"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ". More at "
+        },
+        {
+          "type": "text",
+          "text": "the blog",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.org/blog"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Escaping <tags> & \"quotes\""
+        }
+      ]
+    }
+  ]
+}

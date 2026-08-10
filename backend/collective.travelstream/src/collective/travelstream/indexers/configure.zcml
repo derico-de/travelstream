@@ -32,4 +32,11 @@
       name="longitude"
       />
 
+  <!-- No dummy guard for SearchableText: it exists site-wide and this
+       adapter only specializes it for ITravelArticle objects. -->
+  <adapter
+      factory=".SearchableText.SearchableText"
+      name="SearchableText"
+      />
+
 </configure>
