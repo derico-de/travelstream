@@ -78,6 +78,7 @@ indexers = ["captured_at", "latitude", "longitude", "SearchableText", "processin
 subscribers = ["extract_exif_metadata", "mark_video_processing"]
 views = ["travel-article-view"]
 controlpanels = ["Travelstream"]
+themes = ["Travelstream"]
 
 [tool.plone.project.settings]
 plone_version = "6.1.5"

@@ -15,6 +15,7 @@
       description="Self-hosted travel content hub: capture archive, curation space and public blog in one Plone site"
       provides="Products.GenericSetup.interfaces.EXTENSION"
       directory="profiles/default"
+      post_handler=".setuphandlers.post_install"
       />
 
   <genericsetup:registerProfile
@@ -55,5 +56,11 @@
 
 
   <include package=".controlpanels" />
+
+  <plone:static
+      directory="theme"
+      name="travelstream"
+      type="theme"
+      />
 
 </configure>
