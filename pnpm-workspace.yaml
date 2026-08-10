@@ -1,0 +1,5 @@
+packages:
+  - frontend
+  - shared/tiptap-schema
+allowBuilds:
+  esbuild: true

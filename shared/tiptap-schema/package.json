@@ -1,0 +1,37 @@
+{
+  "name": "@travelstream/tiptap-schema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.27.0",
+    "@tiptap/html": "^2.27.0",
+    "@tiptap/extension-blockquote": "^2.27.0",
+    "@tiptap/extension-bold": "^2.27.0",
+    "@tiptap/extension-bullet-list": "^2.27.0",
+    "@tiptap/extension-code": "^2.27.0",
+    "@tiptap/extension-code-block": "^2.27.0",
+    "@tiptap/extension-document": "^2.27.0",
+    "@tiptap/extension-hard-break": "^2.27.0",
+    "@tiptap/extension-heading": "^2.27.0",
+    "@tiptap/extension-horizontal-rule": "^2.27.0",
+    "@tiptap/extension-italic": "^2.27.0",
+    "@tiptap/extension-link": "^2.27.0",
+    "@tiptap/extension-list-item": "^2.27.0",
+    "@tiptap/extension-ordered-list": "^2.27.0",
+    "@tiptap/extension-paragraph": "^2.27.0",
+    "@tiptap/extension-strike": "^2.27.0",
+    "@tiptap/extension-text": "^2.27.0",
+    "@tiptap/extension-underline": "^2.27.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
