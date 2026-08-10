@@ -11,4 +11,12 @@
       permission="zope2.View"
       />
 
+  <plone:service
+      method="GET"
+      for="plone.dexterity.interfaces.IDexterityContainer"
+      factory=".travel_geojson.TravelGeojsonService"
+      name="@travel-geojson"
+      permission="zope2.View"
+      />
+
 </configure>
