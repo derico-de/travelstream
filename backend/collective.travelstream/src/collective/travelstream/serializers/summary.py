@@ -27,6 +27,7 @@ class TravelCapturedSummarySerializer(DefaultJSONSummarySerializer):
         obj = self.context
 
         summary["kind"] = derived_kind(obj.portal_type)
+        summary["UID"] = obj.UID()
 
         captured = getattr(obj, "captured_at", None)
         if captured is None:

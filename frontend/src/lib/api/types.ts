@@ -24,6 +24,7 @@ export interface ImageFieldScales {
 export interface TimelineItem {
   '@id': string;
   '@type': string;
+  UID: string;
   title: string;
   description: string;
   review_state: string | null;

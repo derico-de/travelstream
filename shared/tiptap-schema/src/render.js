@@ -7,6 +7,10 @@ import { generateHTML } from '@tiptap/html';
 
 import { travelExtensions } from './schema.js';
 
+/**
+ * @param {object | null | undefined} doc
+ * @returns {string}
+ */
 export function renderToHTML(doc) {
   if (!doc || typeof doc !== 'object') return '';
   return generateHTML(doc, travelExtensions);

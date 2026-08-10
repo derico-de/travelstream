@@ -129,3 +129,35 @@ class TestTravelPublish:
         actions = [e.get("action") for e in r.json()]
         assert "publish" in actions
         assert "retract" in actions
+
+
+class TestEmbeddedRelations:
+    """Ticket 13: the editor maintains embedded_entries via PATCH (UIDs)."""
+
+    def test_relations_updated_to_exact_set(self, publish_setup, manager_request):
+        article = publish_setup["article"]
+        other = publish_setup["private"]
+
+        # Swap the embedded set: remove 'embedded', add 'private'
+        r = manager_request.patch(
+            article["@id"], json={"embedded_entries": [other["UID"]]}
+        )
+        assert r.status_code in (200, 204), r.text
+
+        fetched = manager_request.get(article["@id"]).json()
+        uids = [rel["UID"] for rel in fetched["embedded_entries"]]
+        assert uids == [other["UID"]]
+
+        # Publish now exposes exactly the new set
+        r = manager_request.post(f"{article['@id']}/@travel-publish", json={})
+        titles = {i["title"] for i in r.json()["items"]}
+        assert titles == {"The article", "private"}
+
+    def test_embed_survives_rename(self, publish_setup, manager_request):
+        # resolveuid embeds keep working when the source entry is renamed:
+        # the rendered HTML references the UID, not the path.
+        embedded = publish_setup["embedded"]
+        r = manager_request.patch(embedded["@id"], json={"title": "renamed"})
+        assert r.status_code in (200, 204)
+        fetched = manager_request.get(publish_setup["article"]["@id"]).json()
+        assert fetched["embedded_entries"][0]["UID"] == embedded["UID"]

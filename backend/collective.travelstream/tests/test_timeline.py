@@ -125,6 +125,7 @@ class TestTimelineService:
         ).json()["items"]
         scales = items[0]["image_scales"]
         assert "image" in scales
+        assert items[0]["UID"]
         download = scales["image"][0]["scales"]["thumb"]["download"]
         assert "@@images" in download
 
