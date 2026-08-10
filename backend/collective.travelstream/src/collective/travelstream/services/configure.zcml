@@ -27,4 +27,12 @@
       permission="zope2.View"
       />
 
+  <plone:service
+      method="POST"
+      for="collective.travelstream.behaviors.itravelarticle.ITravelArticle"
+      factory=".travel_publish.TravelPublishService"
+      name="@travel-publish"
+      permission="cmf.ModifyPortalContent"
+      />
+
 </configure>
