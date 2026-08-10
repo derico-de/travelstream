@@ -5,6 +5,7 @@ every timeline member sorts deterministically even before metadata arrives.
 """
 
 from collective.travelstream.behaviors.itravelcaptured import ITravelCaptured
+from collective.travelstream.kinds import capture_time
 from plone.dexterity.interfaces import IDexterityContent
 from plone.indexer import indexer
 
@@ -18,7 +19,4 @@ def dummy(obj):
 @indexer(ITravelCaptured)
 def captured_at(obj):
     """Return the capture time, falling back to the creation time."""
-    value = getattr(obj, "captured_at", None)
-    if value is None:
-        value = obj.created().asdatetime()
-    return value
+    return capture_time(obj)

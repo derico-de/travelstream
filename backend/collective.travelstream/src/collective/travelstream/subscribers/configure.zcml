@@ -21,4 +21,9 @@
       handler=".mark_video_processing.handler"
       />
 
+  <subscriber
+      for="plone.registry.interfaces.IRecordModifiedEvent"
+      handler=".article_type_changed.handler"
+      />
+
 </configure>

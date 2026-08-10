@@ -60,14 +60,21 @@ export function localTokenStorage(key = 'travelstream.token'): TokenStorage {
   };
 }
 
-function isTokenExpiringSoon(token: string, withinSeconds = 60 * 60 * 24): boolean {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (typeof payload.exp !== 'number') return false;
-    return payload.exp - Date.now() / 1000 < withinSeconds;
+    const base64url = token.split('.')[1] ?? '';
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isTokenExpiringSoon(token: string, withinSeconds = 60 * 60 * 24): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') return false;
+  return payload.exp - Date.now() / 1000 < withinSeconds;
 }
 
 export class ApiClient {
@@ -231,7 +238,9 @@ export class ApiClient {
   geojson(containerUrl: string, filters: TimelineFilters = {}): Promise<GeojsonResponse> {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(filters)) {
-      if (value !== undefined) params.set(key, String(value));
+      if (value === undefined) continue;
+      if (Array.isArray(value)) value.forEach((v) => params.append(key, String(v)));
+      else params.set(key, String(value));
     }
     const qs = params.toString();
     return this.get<GeojsonResponse>(
@@ -251,5 +260,13 @@ export class ApiClient {
   authHeaders(): Record<string, string> {
     const token = this.tokens.get();
     return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  /** Userid from the JWT (its `sub` claim), or null. */
+  currentUserId(): string | null {
+    const token = this.tokens.get();
+    if (!token) return null;
+    const sub = decodeJwtPayload(token)?.sub;
+    return typeof sub === 'string' ? sub : null;
   }
 }

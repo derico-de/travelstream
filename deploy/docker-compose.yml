@@ -49,8 +49,8 @@ services:
     restart: unless-stopped
     environment:
       PLONE_URL: http://backend:8080/Plone
-      PLONE_USER: ${WORKER_USER:-admin}
-      PLONE_PASSWORD: ${WORKER_PASSWORD:-admin}
+      PLONE_USER: ${WORKER_USER:?set WORKER_USER in .env}
+      PLONE_PASSWORD: ${WORKER_PASSWORD:?set WORKER_PASSWORD in .env}
       POLL_SECONDS: "15"
     depends_on:
       - backend

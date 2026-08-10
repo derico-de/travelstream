@@ -7,10 +7,12 @@ from .test_publish import SIMPLE_DOC
 
 @pytest.fixture
 def published_article(manager_request):
-    r = manager_request.post("/", json={"@type": "Trip", "title": "B", "id": "b"})
+    r = manager_request.post(
+        "/trips", json={"@type": "Trip", "title": "B", "id": "b"}
+    )
     assert r.status_code == 201
     r = manager_request.post(
-        "/b",
+        "/trips/b",
         json={
             "@type": "Document",
             "title": "Northern lights",
@@ -41,9 +43,11 @@ class TestBlogCollection:
         assert "Northern lights" in titles
 
     def test_unpublished_articles_never_listed(self, manager_request, anon_request):
-        manager_request.post("/", json={"@type": "Trip", "title": "B2", "id": "b2"})
+        manager_request.post(
+            "/trips", json={"@type": "Trip", "title": "B2", "id": "b2"}
+        )
         r = manager_request.post(
-            "/b2",
+            "/trips/b2",
             json={
                 "@type": "Document",
                 "title": "Secret draft",
@@ -83,3 +87,20 @@ class TestTheme:
         assert registry["plone.app.theming.interfaces.IThemeSettings.rules"] == (
             "/++theme++travelstream/rules.xml"
         )
+
+
+class TestTripsArea:
+    def test_household_trips_container_created(self, manager_request):
+        r = manager_request.get("/trips")
+        assert r.status_code == 200
+        assert r.json()["@type"] == "Folder"
+
+    def test_blog_scoped_to_trips_path(self, manager_request, anon_request):
+        # A published Document OUTSIDE the trips area never reaches /blog.
+        r = manager_request.post(
+            "/", json={"@type": "Document", "title": "Site page", "id": "page"}
+        )
+        assert r.status_code == 201
+        manager_request.post("/page/@workflow/publish", json={})
+        r = anon_request.get("/blog")
+        assert "Site page" not in [i["title"] for i in r.json()["items"]]

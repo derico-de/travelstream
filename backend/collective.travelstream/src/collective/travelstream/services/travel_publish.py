@@ -21,7 +21,12 @@ class TravelPublishService(Service):
     """Publish an article and exactly the media it embeds.
 
     Endpoint: POST @travel-publish
-    Body (optional): {"transition": "publish" | "retract"}
+    Body (optional): {"transition": "publish" | "retract",
+                      "include_media": true | false}
+
+    ``include_media`` defaults to true; pass false on retract to take
+    only the article private (e.g. when its media is shared with another
+    still-published article).
     """
 
     def reply(self):
@@ -39,10 +44,11 @@ class TravelPublishService(Service):
             }
 
         objects = [self.context]
-        for relation in getattr(self.context, "embedded_entries", None) or []:
-            target = relation.to_object
-            if target is not None:
-                objects.append(target)
+        if data.get("include_media", True):
+            for relation in getattr(self.context, "embedded_entries", None) or []:
+                target = relation.to_object
+                if target is not None:
+                    objects.append(target)
 
         results = [self._transition_one(obj, transition) for obj in objects]
         ok = all(r["status"] in ("done", "unchanged") for r in results)

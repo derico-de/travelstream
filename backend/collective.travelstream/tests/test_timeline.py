@@ -21,12 +21,8 @@ def file_payload(title, **fields):
 
 @pytest.fixture
 def trips_area(manager_request):
-    """Household container with two trips and mixed captures."""
-    r = manager_request.post(
-        "/", json={"@type": "Folder", "title": "Trips", "id": "trips"}
-    )
-    assert r.status_code == 201, r.text
-
+    """Two trips with mixed captures in the household container
+    (/trips is created by the installation profile)."""
     r = manager_request.post(
         "/trips", json={"@type": "Trip", "title": "Alps", "id": "alps"}
     )

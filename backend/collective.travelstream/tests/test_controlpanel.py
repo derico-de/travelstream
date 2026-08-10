@@ -83,6 +83,15 @@ class TestControlPanel:
         # The PWA-facing contract follows the setting
         r = manager_request.get("/@travelstream-settings")
         assert r.json()["article_type"] == "News Item"
+        # ...and so do the Trip's addable types
+        r = manager_request.get(f"{trip['@id']}/@types")
+        addable = {t["id"] for t in r.json() if t.get("addable")}
+        assert "News Item" in addable
+        assert "Document" not in addable
+        # ...and the blog collection criteria
+        r = manager_request.get("/blog")
+        query = {row["i"]: row for row in r.json()["query"]}
+        assert query["portal_type"]["v"] == ["News Item"]
 
     def test_control_panel_form_renders(self, manager_request, request_factory):
         session = request_factory(role="Manager", api=False)

@@ -33,6 +33,8 @@ PLONE_URL = os.environ.get("PLONE_URL", "http://backend:8080/Plone").rstrip("/")
 PLONE_USER = os.environ.get("PLONE_USER", "admin")
 PLONE_PASSWORD = os.environ.get("PLONE_PASSWORD", "admin")
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "15"))
+# One hung socket must not stall the single-threaded poll loop.
+HTTP_TIMEOUT = (10, 300)  # (connect, read) seconds
 
 
 def session() -> requests.Session:
@@ -46,13 +48,14 @@ def poll_processing(s: requests.Session) -> list[dict]:
     response = s.get(
         f"{PLONE_URL}/@search",
         params={"processing_status": "processing", "portal_type": "File"},
+        timeout=HTTP_TIMEOUT,
     )
     response.raise_for_status()
     return response.json().get("items", [])
 
 
 def download_blob(s: requests.Session, item_url: str, target: Path) -> None:
-    with s.get(f"{item_url}/@@download/file", stream=True) as response:
+    with s.get(f"{item_url}/@@download/file", stream=True, timeout=HTTP_TIMEOUT) as response:
         response.raise_for_status()
         with open(target, "wb") as fh:
             for chunk in response.iter_content(1 << 20):
@@ -95,7 +98,7 @@ def write_results(
         "processing_status": "processed",
         "processing_error": None,
     }
-    response = s.patch(f"{item_url}", json=payload)
+    response = s.patch(f"{item_url}", json=payload, timeout=HTTP_TIMEOUT)
     response.raise_for_status()
 
 
@@ -104,6 +107,7 @@ def mark_failed(s: requests.Session, item_url: str, reason: str) -> None:
         s.patch(
             item_url,
             json={"processing_status": "failed", "processing_error": reason[:2000]},
+            timeout=HTTP_TIMEOUT,
         ).raise_for_status()
     except requests.RequestException:
         log.exception("could not even mark %s as failed", item_url)
@@ -118,7 +122,7 @@ def process_one(s: requests.Session, item: dict) -> None:
             source = workdir / "source"
             download_blob(s, item_url, source)
             poster, remuxed = run_ffmpeg(source, workdir)
-            info = s.get(item_url).json()
+            info = s.get(item_url, timeout=HTTP_TIMEOUT).json()
             filename = (info.get("file") or {}).get("filename", "video.mp4")
             write_results(s, item_url, filename, poster, remuxed)
         log.info("processed %s", item_url)

@@ -37,26 +37,25 @@ export function tripCoverUrl(trip: Trip): string | null {
   return download.startsWith('http') ? browseUrl(download) : `${browseUrl(trip['@id'])}/${download}`;
 }
 
-export function itemThumbnail(item: TimelineItem): string | null {
+function itemScaleUrl(item: TimelineItem, preference: string[]): string | null {
   for (const fieldScales of Object.values(item.image_scales ?? {})) {
     const entry = fieldScales?.[0];
     if (!entry) continue;
-    const scale = entry.scales?.teaser ?? entry.scales?.preview ?? entry.scales?.thumb;
+    const scale = preference
+      .map((name) => entry.scales?.[name])
+      .find((candidate) => candidate !== undefined);
     const download = scale?.download ?? entry.download;
     if (download) return `${browseUrl(item['@id'])}/${download}`;
   }
   return null;
 }
 
+export function itemThumbnail(item: TimelineItem): string | null {
+  return itemScaleUrl(item, ['teaser', 'preview', 'thumb']);
+}
+
 export function itemFullImage(item: TimelineItem): string | null {
-  for (const fieldScales of Object.values(item.image_scales ?? {})) {
-    const entry = fieldScales?.[0];
-    if (!entry) continue;
-    const scale = entry.scales?.larger ?? entry.scales?.large ?? entry.scales?.preview;
-    const download = scale?.download ?? entry.download;
-    if (download) return `${browseUrl(item['@id'])}/${download}`;
-  }
-  return null;
+  return itemScaleUrl(item, ['larger', 'large', 'preview']);
 }
 
 const dateFormat = new Intl.DateTimeFormat(undefined, {

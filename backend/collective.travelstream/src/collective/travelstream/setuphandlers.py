@@ -2,6 +2,7 @@
 
 import logging
 
+from collective.travelstream.kinds import article_portal_type
 from plone import api
 from plone.base.interfaces import INonInstallable
 from Products.CMFPlone.interfaces.syndication import IFeedSettings
@@ -11,6 +12,7 @@ from zope.interface import implementer
 logger = logging.getLogger("collective.travelstream")
 
 BLOG_ID = "blog"
+TRIPS_ID = "trips"
 
 
 @implementer(INonInstallable)
@@ -25,8 +27,16 @@ class HiddenProfiles:
 
 
 def post_install(context):
-    """Create the public blog collection (idempotent)."""
+    """Create the household trips area + public blog collection (idempotent)."""
     portal = api.portal.get()
+
+    # Per-household container: all trip content lives under /trips, which
+    # is what keeps the structure tenant-ready and queries path-scoped.
+    if TRIPS_ID not in portal:
+        api.content.create(
+            container=portal, type="Folder", id=TRIPS_ID, title="Trips"
+        )
+
     if BLOG_ID in portal:
         return
 
@@ -41,12 +51,17 @@ def post_install(context):
         {
             "i": "portal_type",
             "o": "plone.app.querystring.operation.selection.any",
-            "v": ["Document"],
+            "v": [article_portal_type()],
         },
         {
             "i": "review_state",
             "o": "plone.app.querystring.operation.selection.any",
             "v": ["published"],
+        },
+        {
+            "i": "path",
+            "o": "plone.app.querystring.operation.string.absolutePath",
+            "v": f"/{TRIPS_ID}",
         },
     ]
     blog.sort_on = "effective"

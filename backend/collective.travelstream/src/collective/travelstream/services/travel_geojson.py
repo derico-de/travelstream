@@ -6,6 +6,7 @@ captured_before, kind, bbox); objects without coordinates are omitted.
 Clustering is client-side in MapLibre — this returns plain features.
 """
 
+from collective.travelstream.kinds import capture_time
 from collective.travelstream.kinds import derived_kind
 from plone import api
 from plone.base.interfaces import IImageScalesAdapter
@@ -63,10 +64,6 @@ class TravelGeojsonService(Service):
             )
             scales = scales_adapter() if scales_adapter is not None else {}
 
-            captured = getattr(obj, "captured_at", None)
-            if captured is None:
-                captured = obj.created().asdatetime()
-
             features.append(
                 {
                     "type": "Feature",
@@ -79,7 +76,7 @@ class TravelGeojsonService(Service):
                         "uid": brain.UID,
                         "title": obj.Title(),
                         "kind": derived_kind(obj.portal_type),
-                        "captured_at": json_compatible(captured),
+                        "captured_at": json_compatible(capture_time(obj)),
                         "thumbnail": _thumbnail_url(obj, self.request, scales),
                     },
                 }

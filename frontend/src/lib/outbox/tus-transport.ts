@@ -119,9 +119,15 @@ export class TusTransport implements OutboxTransport {
       remoteUrl = null;
     }
     if (!remoteUrl) {
+      // Fallback: newest item *created by this user* in the trip, so a
+      // partner uploading concurrently can never receive our metadata.
+      const creator = this.api.currentUserId();
+      const creatorFilter = creator ? `&Creator=${encodeURIComponent(creator)}` : '';
       const listing = await this.api.get<{
         items: { '@id': string; created?: string }[];
-      }>(`/${item.tripPath}?b_size=1&sort_on=created&sort_order=descending`);
+      }>(
+        `/${item.tripPath}?b_size=1&sort_on=created&sort_order=descending${creatorFilter}`
+      );
       remoteUrl = listing.items?.[0]?.['@id'] ?? null;
     }
     if (!remoteUrl) {

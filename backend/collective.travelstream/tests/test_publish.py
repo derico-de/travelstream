@@ -111,6 +111,23 @@ class TestTravelPublish:
         r = anon_request.get(publish_setup["embedded"]["@id"])
         assert r.status_code in (401, 404)
 
+    def test_retract_article_only_keeps_media_public(
+        self, publish_setup, manager_request, anon_request
+    ):
+        article = publish_setup["article"]
+        manager_request.post(f"{article['@id']}/@travel-publish", json={})
+        r = manager_request.post(
+            f"{article['@id']}/@travel-publish",
+            json={"transition": "retract", "include_media": False},
+        )
+        assert r.status_code == 200
+        assert [i["title"] for i in r.json()["items"]] == ["The article"]
+
+        # Article private again, but the embedded media stays public
+        # (it may be shared with another still-published article).
+        assert anon_request.get(article["@id"]).status_code in (401, 404)
+        assert anon_request.get(publish_setup["embedded"]["@id"]).status_code == 200
+
     def test_unknown_transition_is_bad_request(self, publish_setup, manager_request):
         r = manager_request.post(
             f"{publish_setup['article']['@id']}/@travel-publish",

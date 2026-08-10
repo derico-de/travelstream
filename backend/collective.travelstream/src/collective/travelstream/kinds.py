@@ -41,3 +41,15 @@ def portal_types_for_kind(kind):
     if kind == "article":
         return [article_portal_type()]
     return [pt for pt, k in _STOCK_KINDS.items() if k == kind]
+
+
+def capture_time(obj):
+    """The object's capture time, falling back to its creation time.
+
+    Single source of the fallback policy — used by the captured_at
+    indexer, the summary serializer and the GeoJSON service alike.
+    """
+    value = getattr(obj, "captured_at", None)
+    if value is None:
+        value = obj.created().asdatetime()
+    return value
