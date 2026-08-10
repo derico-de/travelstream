@@ -26,6 +26,10 @@ class CollectiveTravelstreamLayer(PloneSandboxLayer):
 
     def setUpPloneSite(self, portal):
         """Set up Plone site."""
+        # plone.app.testing disables the default workflow chain; restore the
+        # stock Plone default so workflow behavior matches a real site.
+        portal.portal_workflow.setDefaultChain("simple_publication_workflow")
+        self.applyProfile(portal, "plone.restapi:default")
         self.applyProfile(portal, "collective.travelstream:default")
 
 
@@ -36,8 +40,10 @@ INTEGRATION_TESTING = IntegrationTesting(
     name="CollectiveTravelstreamLayer:IntegrationTesting",
 )
 
+# Includes the WSGI server so REST API tests can use real HTTP sessions
+# (the backend test seam is the plone.restapi HTTP layer).
 FUNCTIONAL_TESTING = FunctionalTesting(
-    bases=(FIXTURE,),
+    bases=(FIXTURE, WSGI_SERVER_FIXTURE),
     name="CollectiveTravelstreamLayer:FunctionalTesting",
 )
 

@@ -1,0 +1,12 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="collective.travelstream">
+
+  <plone:behavior
+      title="ITrip"
+      description="A folderish travel trip: date range, cover image, description"
+      provides=".trip.ITrip"
+      />
+
+</configure>

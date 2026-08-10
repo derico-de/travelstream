@@ -32,4 +32,7 @@
       handler="collective.travelstream.setuphandlers.uninstall"
       />
 
+
+  <include package=".content" />
+
 </configure>

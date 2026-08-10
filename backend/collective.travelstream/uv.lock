@@ -471,9 +471,11 @@ source = { editable = "." }
 dependencies = [
     { name = "paste" },
     { name = "plone" },
+    { name = "plone-api" },
     { name = "plone-app-caching" },
     { name = "plone-app-upgrade" },
     { name = "plone-classicui" },
+    { name = "plone-restapi" },
     { name = "setuptools" },
 ]
 
@@ -496,10 +498,12 @@ dev = [
 requires-dist = [
     { name = "paste" },
     { name = "plone", specifier = ">=6.1" },
+    { name = "plone-api" },
     { name = "plone-app-caching" },
     { name = "plone-app-testing", marker = "extra == 'test'" },
     { name = "plone-app-upgrade" },
     { name = "plone-classicui" },
+    { name = "plone-restapi" },
     { name = "plone-testing", marker = "extra == 'test'" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
