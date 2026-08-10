@@ -5,17 +5,33 @@
 
   import { api } from '$lib/session';
   import { contentPath } from '$lib/format';
-  import { mapStyle } from '$lib/map/style';
+  import { offlineStyle, onlineStyle } from '$lib/map/style';
+  import { firstBundleBlob } from '$lib/map/offline';
 
   let { path }: { path: string } = $props();
   let container = $state<HTMLElement | null>(null);
   let error = $state('');
 
+  let styleReady = $state<ReturnType<typeof onlineStyle> | null>(null);
+
   $effect(() => {
-    if (!container) return;
+    (async () => {
+      if (!navigator.onLine) {
+        const bundle = await firstBundleBlob();
+        if (bundle) {
+          styleReady = offlineStyle(bundle, 'region');
+          return;
+        }
+      }
+      styleReady = onlineStyle();
+    })();
+  });
+
+  $effect(() => {
+    if (!container || !styleReady) return;
     const map = new maplibregl.Map({
       container,
-      style: mapStyle(),
+      style: styleReady,
       center: [0, 20],
       zoom: 1.5,
       attributionControl: { compact: true }

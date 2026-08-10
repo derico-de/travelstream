@@ -26,6 +26,7 @@
       <a href="/" class="brand">Travelstream</a>
       <nav>
         <a href="/capture">Capture</a>
+        <a href="/maps">Maps</a>
         <a href="/outbox">Outbox</a>
         <button class="linklike" onclick={() => logout()}>Log out</button>
       </nav>

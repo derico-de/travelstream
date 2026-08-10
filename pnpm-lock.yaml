@@ -29,6 +29,9 @@ importers:
       pmtiles:
         specifier: ^4.0.0
         version: 4.4.1
+      protomaps-themes-base:
+        specifier: ^4.5.0
+        version: 4.5.0
       tus-js-client:
         specifier: ^4.3.0
         version: 4.3.1
@@ -2127,6 +2130,10 @@ packages:
 
   protocol-buffers-schema@3.6.1:
     resolution: {integrity: sha512-VG2K63Igkiv9p76tk1lilczEK1cT+kCjKtkdhw1dQZV3k3IXJbd3o6Ho8b9zJZaHSnT2hKe4I+ObmX9w6m5SmQ==}
+
+  protomaps-themes-base@4.5.0:
+    resolution: {integrity: sha512-z5A6oXAXNi/CHEIbCfzZ/6uVDgnv3pO4C3LFvomxjUFXwyqWZ7HJdfPoNJSIlsvaQubqsaxCbamEzqBr/W7vkg==}
+    deprecated: This package has been migrated to @protomaps/basemaps with a new major version. See the CHANGELOG at https://github.com/protomaps/basemaps/blob/main/CHANGELOG.md for how to migrate.
 
   punycode.js@2.3.1:
     resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
@@ -4763,6 +4770,8 @@ snapshots:
       prosemirror-transform: 1.12.0
 
   protocol-buffers-schema@3.6.1: {}
+
+  protomaps-themes-base@4.5.0: {}
 
   punycode.js@2.3.1: {}
 

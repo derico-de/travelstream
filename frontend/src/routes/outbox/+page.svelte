@@ -1,6 +1,13 @@
 <script lang="ts">
   import { outbox, outboxItems } from '$lib/outbox';
 
+  async function attach(id: string, files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    await outbox.attachFile(id, file, file.name, file.type || 'video/mp4');
+    if (navigator.onLine) void outbox.drain();
+  }
+
   const stateLabels: Record<string, string> = {
     captured: 'Waiting for file',
     queued: 'Queued',
@@ -35,6 +42,16 @@
         {/if}
         {#if item.state === 'done' && item.remoteUrl}
           <span class="done-mark">✓ uploaded</span>
+        {/if}
+        {#if item.state === 'captured' && item.pendingAttachment}
+          <label class="attach">
+            Attach video file
+            <input
+              type="file"
+              accept="video/*"
+              onchange={(e) => attach(item.id, e.currentTarget.files)}
+            />
+          </label>
         {/if}
       </li>
     {/each}
@@ -80,4 +97,15 @@
   }
   .danger { color: #b3261e; }
   .done-mark { font-size: 0.85rem; color: #14691b; }
+  .attach {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px dashed #1a3c5e;
+    border-radius: 6px;
+    color: #1a3c5e;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .attach input { display: none; }
 </style>

@@ -2,6 +2,12 @@
   import { api } from '$lib/session';
   import { outbox } from '$lib/outbox';
   import { extractPhotoMetadata, currentPosition } from '$lib/capture/exif';
+  import {
+    formatBytes,
+    requestPersistentStorage,
+    storageStatus,
+    type StorageStatus
+  } from '$lib/capture/storage';
   import { contentPath, tripIsActive } from '$lib/format';
   import type { Trip } from '$lib/api/types';
   import type { CaptureKind } from '$lib/outbox/types';
@@ -11,8 +17,35 @@
   let noteTitle = $state('');
   let noteText = $state('');
   let flash = $state('');
+  let storage = $state<StorageStatus | null>(null);
 
   const LAST_TRIP_KEY = 'travelstream.lastTrip';
+
+  $effect(() => {
+    // Ask for durable storage up front; surface eviction risk before
+    // large captures (iOS quota honesty - ticket 17).
+    requestPersistentStorage()
+      .catch(() => false)
+      .then(() => storageStatus())
+      .then((status) => (storage = status))
+      .catch(() => (storage = null));
+  });
+
+  async function referenceCameraRoll() {
+    if (!tripPath) return;
+    rememberTrip();
+    const title = window.prompt('Clip name (attach the file when back online)');
+    if (!title) return;
+    const position = await currentPosition();
+    await outbox.enqueue({
+      kind: 'video',
+      tripPath,
+      title,
+      pendingAttachment: true,
+      ...position
+    });
+    flash = 'Reference queued - attach the video from the outbox when online.';
+  }
 
   $effect(() => {
     api.listTrips().then((items) => {
@@ -93,6 +126,23 @@
 
 {#if flash}<p class="flash">{flash}</p>{/if}
 
+{#if storage?.evictionRisk}
+  <div class="storage-warning">
+    <strong>Storage warning:</strong>
+    {#if storage.isIOS && !storage.persisted}
+      iOS may evict locally stored captures.
+      {#if !storage.standalone}
+        Install this app to your home screen for durable storage.
+      {/if}
+    {:else}
+      Local storage is nearly full
+      ({formatBytes(storage.usageBytes)} of {formatBytes(storage.quotaBytes)} used).
+    {/if}
+    For long videos, prefer <em>Reference camera roll</em> below and attach
+    the file once you are back online.
+  </div>
+{/if}
+
 <div class="capture-buttons">
   <label class="capture-button">
     📷 Photo
@@ -114,6 +164,12 @@
     />
   </label>
 </div>
+
+{#if storage?.isIOS || storage?.evictionRisk}
+  <button class="camera-roll" onclick={referenceCameraRoll}>
+    🎞 Reference camera-roll video (attach when online)
+  </button>
+{/if}
 
 <form class="note" onsubmit={captureNote}>
   <h2>Note</h2>
@@ -163,4 +219,21 @@
     cursor: pointer;
   }
   .flash { color: #14691b; }
+  .storage-warning {
+    background: #fdf3e3;
+    border: 1px solid #e8c98a;
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    margin: 0.8rem 0;
+    font-size: 0.9rem;
+  }
+  .camera-roll {
+    display: block;
+    width: 100%;
+    margin-bottom: 1.2rem;
+    background: white;
+    border: 1px dashed #1a3c5e;
+    color: #1a3c5e;
+    cursor: pointer;
+  }
 </style>
