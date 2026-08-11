@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Editor } from '@tiptap/core';
   import { travelExtensions } from '@travelstream/tiptap-schema';
+  import { goto } from '$app/navigation';
 
   import { api } from '$lib/session';
   import { contentPath, fromDatetimeLocal, toDatetimeLocal } from '$lib/format';
@@ -26,8 +27,19 @@
   let error = $state('');
   let saving = $state(false);
   let publishResult = $state<PublishResponse | null>(null);
-  // Bumped on every editor transaction so toolbar active states refresh.
-  let editorTick = $state(0);
+  // Snapshot of toolbar active states, refreshed per transaction. Never
+  // rebuild the toolbar DOM for this ({#key} would swap the buttons
+  // between mousedown and mouseup, eating every first click).
+  let active = $state({
+    bold: false,
+    italic: false,
+    h2: false,
+    h3: false,
+    bulletList: false,
+    orderedList: false,
+    blockquote: false,
+    link: false
+  });
 
   let capturedAt = $state('');
 
@@ -47,8 +59,17 @@
       element: editorElement,
       extensions: travelExtensions,
       content: article.prosemirror_doc ?? { type: 'doc', content: [] },
-      onTransaction: () => {
-        editorTick += 1;
+      onTransaction: ({ editor: e }) => {
+        active = {
+          bold: e.isActive('bold'),
+          italic: e.isActive('italic'),
+          h2: e.isActive('heading', { level: 2 }),
+          h3: e.isActive('heading', { level: 3 }),
+          bulletList: e.isActive('bulletList'),
+          orderedList: e.isActive('orderedList'),
+          blockquote: e.isActive('blockquote'),
+          link: e.isActive('link')
+        };
       }
     });
     editor = instance;
@@ -87,6 +108,20 @@
       flash = 'Saving failed.';
     } finally {
       saving = false;
+    }
+  }
+
+  async function deleteArticle() {
+    if (!article) return;
+    const sure = window.confirm(
+      'Delete this article? Embedded photos and videos stay in the trip.'
+    );
+    if (!sure) return;
+    try {
+      await api.delete(article['@id']);
+      goto(`/t/${tripPath}`);
+    } catch {
+      flash = 'Deleting failed.';
     }
   }
 
@@ -150,42 +185,47 @@
     </label>
 
     {#if editor}
-      {#key editorTick}
-        <div class="toolbar">
-          <button
-            class:on={editor.isActive('bold')}
-            onclick={() => editor?.chain().focus().toggleBold().run()}><b>B</b></button
-          >
-          <button
-            class:on={editor.isActive('italic')}
-            onclick={() => editor?.chain().focus().toggleItalic().run()}><i>I</i></button
-          >
-          <button
-            class:on={editor.isActive('heading', { level: 2 })}
-            onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-            >H2</button
-          >
-          <button
-            class:on={editor.isActive('heading', { level: 3 })}
-            onclick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-            >H3</button
-          >
-          <button
-            class:on={editor.isActive('bulletList')}
-            onclick={() => editor?.chain().focus().toggleBulletList().run()}>••</button
-          >
-          <button
-            class:on={editor.isActive('orderedList')}
-            onclick={() => editor?.chain().focus().toggleOrderedList().run()}>1.</button
-          >
-          <button
-            class:on={editor.isActive('blockquote')}
-            onclick={() => editor?.chain().focus().toggleBlockquote().run()}>❝</button
-          >
-          <button class:on={editor.isActive('link')} onclick={setLink}>🔗</button>
-          <button onclick={() => (pickerOpen = true)}>📷 Embed</button>
-        </div>
-      {/key}
+      <!-- preventDefault on mousedown keeps focus (and the selection) in
+           the editor while a toolbar button is pressed. -->
+      <div
+        class="toolbar"
+        role="toolbar"
+        tabindex="-1"
+        onmousedown={(event) => event.preventDefault()}
+      >
+        <button
+          class:on={active.bold}
+          onclick={() => editor?.chain().focus().toggleBold().run()}><b>B</b></button
+        >
+        <button
+          class:on={active.italic}
+          onclick={() => editor?.chain().focus().toggleItalic().run()}><i>I</i></button
+        >
+        <button
+          class:on={active.h2}
+          onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+          >H2</button
+        >
+        <button
+          class:on={active.h3}
+          onclick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+          >H3</button
+        >
+        <button
+          class:on={active.bulletList}
+          onclick={() => editor?.chain().focus().toggleBulletList().run()}>••</button
+        >
+        <button
+          class:on={active.orderedList}
+          onclick={() => editor?.chain().focus().toggleOrderedList().run()}>1.</button
+        >
+        <button
+          class:on={active.blockquote}
+          onclick={() => editor?.chain().focus().toggleBlockquote().run()}>❝</button
+        >
+        <button class:on={active.link} onclick={setLink}>🔗</button>
+        <button onclick={() => (pickerOpen = true)}>📷 Embed</button>
+      </div>
     {/if}
 
     <div class="surface" bind:this={editorElement}></div>
@@ -199,6 +239,7 @@
       {:else}
         <button onclick={() => publish('publish')}>Publish</button>
       {/if}
+      <button class="danger" onclick={deleteArticle}>Delete</button>
       {#if flash}<span class="flash">{flash}</span>{/if}
     </div>
 
@@ -302,6 +343,11 @@
     cursor: pointer;
   }
   .actions .primary { background: var(--primary); color: white; border: none; }
+  .actions .danger {
+    margin-left: auto;
+    border-color: #b3261e;
+    color: #b3261e;
+  }
   .flash { color: #14691b; }
   .publish-result { color: #5a6676; font-size: 0.85rem; }
   .error { color: #b3261e; }

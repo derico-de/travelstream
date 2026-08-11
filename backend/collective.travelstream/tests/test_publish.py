@@ -85,12 +85,9 @@ class TestTravelPublish:
         r = anon_request.get(publish_setup["private"]["@id"])
         assert r.status_code in (401, 404)
 
-    def test_editor_can_publish_article(
-        self, publish_setup, manager_request, request_factory
-    ):
-        # Regression: household members hold Editor (not Reviewer/Manager)
-        # on the trip; publishing an article from the PWA must work for
-        # them.
+    @pytest.fixture
+    def housemate_session(self, publish_setup, manager_request, request_factory):
+        """A household member: Editor (not Reviewer/Manager) on the trip."""
         r = manager_request.post(
             "/@users",
             json={
@@ -113,14 +110,28 @@ class TestTravelPublish:
             },
         )
         assert r.status_code == 204, r.text
+        return request_factory(basic_auth=("housemate", "correct horse battery"))
 
-        session = request_factory(basic_auth=("housemate", "correct horse battery"))
-        r = session.post(
+    def test_editor_can_publish_article(self, publish_setup, housemate_session):
+        # Regression: publishing an article from the PWA must work with
+        # edit rights alone.
+        r = housemate_session.post(
             f"{publish_setup['article']['@id']}/@travel-publish", json={}
         )
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["all_done"] is True, body
+
+    def test_editor_can_delete_article(self, publish_setup, housemate_session):
+        # The PWA offers deleting an article; stock restapi DELETE must
+        # work with the household Editor role (media stays untouched).
+        article = publish_setup["article"]
+        r = housemate_session.delete(article["@id"])
+        assert r.status_code == 204, r.text
+        r = housemate_session.get(article["@id"])
+        assert r.status_code == 404
+        r = housemate_session.get(publish_setup["embedded"]["@id"])
+        assert r.status_code == 200
 
     def test_publish_is_idempotent(self, publish_setup, manager_request):
         url = f"{publish_setup['article']['@id']}/@travel-publish"
