@@ -1,5 +1,15 @@
 <script lang="ts">
   import { outbox, outboxItems } from '$lib/outbox';
+  import { api } from '$lib/session';
+  import { contentPath } from '$lib/format';
+  import type { Trip } from '$lib/api/types';
+  import type { OutboxItem } from '$lib/outbox/types';
+
+  let trips = $state<Trip[]>([]);
+
+  $effect(() => {
+    api.listTrips().then((items) => (trips = items)).catch(() => (trips = []));
+  });
 
   async function attach(id: string, files: FileList | null) {
     const file = files?.[0];
@@ -8,28 +18,66 @@
     if (navigator.onLine) void outbox.drain();
   }
 
+  async function assign(id: string, tripPath: string) {
+    if (!tripPath) return;
+    await outbox.assignTrip(id, tripPath);
+    if (navigator.onLine) void outbox.drain();
+  }
+
+  function needsTrip(item: OutboxItem): boolean {
+    return !item.tripPath && item.state !== 'done';
+  }
+
   const stateLabels: Record<string, string> = {
-    captured: 'Waiting for file',
-    queued: 'Queued',
+    captured: 'Waiting for its file',
+    queued: 'Waiting to upload',
     uploading: 'Uploading',
-    done: 'Done',
-    failed: 'Failed'
+    done: 'Uploaded',
+    failed: 'Upload failed'
   };
+
+  function stateLabel(item: OutboxItem): string {
+    if (needsTrip(item) && item.state !== 'failed') return 'Needs a trip';
+    return stateLabels[item.state];
+  }
 </script>
 
 <h1>Outbox</h1>
 
 {#if $outboxItems.length === 0}
-  <p>Nothing queued. Captures land here and upload when you are online.</p>
+  <p>Nothing waiting. Captures land here and upload when you're online.</p>
 {:else}
+  <div class="toolbar">
+    {#if $outboxItems.some((i) => i.state === 'failed')}
+      <button onclick={() => outbox.retryAll()}>Retry all failed</button>
+    {/if}
+    {#if $outboxItems.some((i) => i.state === 'done')}
+      <button onclick={() => outbox.clearDone()}>Clear uploaded</button>
+    {/if}
+  </div>
   <ul class="outbox">
     {#each $outboxItems as item (item.id)}
       <li class={item.state}>
         <div class="row">
           <span class="kind">{item.kind}</span>
           <strong>{item.title}</strong>
-          <span class="state">{stateLabels[item.state]}</span>
+          <span class="state">{stateLabel(item)}</span>
         </div>
+        {#if needsTrip(item)}
+          <label class="assign">
+            Trip
+            {#if trips.length > 0}
+              <select onchange={(e) => assign(item.id, e.currentTarget.value)}>
+                <option value="">Pick a trip…</option>
+                {#each trips as trip (trip['@id'])}
+                  <option value={contentPath(trip['@id'])}>{trip.title}</option>
+                {/each}
+              </select>
+            {:else}
+              <span class="assign-hint">Trips can't load right now — this stays safe here and uploads once you pick a trip.</span>
+            {/if}
+          </label>
+        {/if}
         {#if item.state === 'uploading'}
           <progress value={item.progress} max="1"></progress>
         {/if}
@@ -39,9 +87,6 @@
             <button onclick={() => outbox.retry(item.id)}>Retry</button>
             <button class="danger" onclick={() => outbox.delete(item.id)}>Delete</button>
           </div>
-        {/if}
-        {#if item.state === 'done' && item.remoteUrl}
-          <span class="done-mark">✓ uploaded</span>
         {/if}
         {#if item.state === 'captured' && item.pendingAttachment}
           <label class="attach">
@@ -59,11 +104,20 @@
 {/if}
 
 <style>
+  h1 {
+    margin: 0 0 1rem;
+  }
+  .toolbar {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
   .outbox {
     list-style: none;
+    margin: 0;
     padding: 0;
     display: grid;
-    gap: 0.7rem;
+    gap: 0.6rem;
   }
   li {
     background: white;
@@ -85,27 +139,64 @@
   li.failed .state { color: #b3261e; }
   li.done .state { color: #14691b; }
   progress { width: 100%; }
-  .error { color: #b3261e; font-size: 0.85rem; margin: 0.4rem 0; }
+  .error { color: #b3261e; font-size: 0.85rem; margin: 0.3rem 0; }
   .actions { display: flex; gap: 0.6rem; }
   button {
     font: inherit;
-    padding: 0.3rem 0.8rem;
+    padding: 0.5rem 1rem;
     border-radius: 6px;
     border: 1px solid #b8c0cc;
     background: white;
     cursor: pointer;
+    min-height: 2.75rem;
   }
   .danger { color: #b3261e; }
-  .done-mark { font-size: 0.85rem; color: #14691b; }
   .attach {
-    display: inline-block;
-    margin-top: 0.4rem;
-    padding: 0.3rem 0.8rem;
-    border: 1px dashed #1a3c5e;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 2.75rem;
+    margin-top: 0.6rem;
+    padding: 0.5rem 1rem;
+    border: 1px dashed var(--primary);
     border-radius: 6px;
-    color: #1a3c5e;
+    color: var(--primary);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
-  .attach input { display: none; }
+  /* Same rule as capture: keep the input in the tab order. */
+  .attach input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .attach:has(input:focus-visible) {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  .assign {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: #5a6676;
+  }
+  .assign select {
+    font: inherit;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #b8c0cc;
+    min-height: 2.75rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .assign-hint { color: #5a6676; }
 </style>

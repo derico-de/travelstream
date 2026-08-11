@@ -13,3 +13,7 @@ Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `read
 ### Domain docs
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Design context
+
+`PRODUCT.md` (repo root) holds strategy: users, positioning, personality, anti-references, design principles. `DESIGN.md` (repo root) holds the visual system: the Harbor Teal palette, type scale, elevation and component doctrine. Read both before designing or changing UI; the frontend's design tokens live in `frontend/src/routes/+layout.svelte` (`:root` custom properties).

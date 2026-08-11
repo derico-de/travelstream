@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Enable the travel article behavior on stock Document (the default
      article type) and render it through the ProseMirror JSON view.
-     Site-wide change, documented in the spec. -->
+     The captured behavior makes articles travel timeline members
+     (ITravelCaptured is the membership marker) with their own capture
+     time. Site-wide change, documented in the spec. -->
 <object name="Document" meta_type="Dexterity FTI" purge="False">
   <property name="behaviors" purge="False">
     <element value="collective.travelstream.article"/>
+    <element value="collective.travelstream.captured"/>
   </property>
   <property name="default_view">travel-article-view</property>
   <property name="view_methods" purge="False">

@@ -9,6 +9,7 @@
 import type {
   GeojsonResponse,
   LoginResponse,
+  NewTrip,
   PublishResponse,
   TimelineFilters,
   TimelineResponse,
@@ -216,6 +217,11 @@ export class ApiClient {
 
   getTrip(tripUrl: string): Promise<Trip> {
     return this.get<Trip>(tripUrl);
+  }
+
+  /** Create a Trip in the household trips container. */
+  createTrip(data: NewTrip): Promise<Trip> {
+    return this.post<Trip>('/trips', { '@type': 'Trip', ...data });
   }
 
   timeline(containerUrl: string, filters: TimelineFilters = {}): Promise<TimelineResponse> {

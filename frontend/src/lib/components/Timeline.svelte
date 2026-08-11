@@ -79,6 +79,7 @@
     <option value="photo">Photos</option>
     <option value="video">Videos</option>
     <option value="note">Notes</option>
+    <option value="article">Articles</option>
   </select>
   <input type="date" bind:value={after} title="From" />
   <input type="date" bind:value={before} title="Until" />
@@ -91,7 +92,9 @@
   <ul class="timeline">
     {#each items as item (item['@id'])}
       <li>
-        <a href={`/e/${contentPath(item['@id'])}`}>
+        <a
+          href={`/${item.kind === 'article' ? 'a' : 'e'}/${contentPath(item['@id'])}`}
+        >
           {#if itemThumbnail(item)}
             <img src={itemThumbnail(item)} alt="" loading="lazy" />
           {:else}

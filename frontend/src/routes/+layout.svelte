@@ -24,20 +24,62 @@
   {#if $authenticated}
     <header class="topbar">
       <a href="/" class="brand">Travelstream</a>
-      <nav>
-        <a href="/capture">Capture</a>
-        <a href="/maps">Maps</a>
-        <a href="/outbox">Outbox</a>
-        <button class="linklike" onclick={() => logout()}>Log out</button>
-      </nav>
+      <button class="logout" onclick={() => logout()}>Log out</button>
     </header>
   {/if}
-  <main>
+  <main class:fill={$page.url.pathname.startsWith('/capture')}>
     {@render children()}
   </main>
+  {#if $authenticated}
+    <nav class="bottom-nav" aria-label="Primary">
+      <a
+        href="/"
+        class="nav-btn"
+        aria-current={$page.url.pathname === '/' ||
+        $page.url.pathname.startsWith('/t/') ||
+        $page.url.pathname.startsWith('/trips')
+          ? 'page'
+          : undefined}
+      >
+        <span class="nav-icon" aria-hidden="true">🧳</span>
+        <span class="nav-label">Trips</span>
+      </a>
+      <a
+        href="/capture"
+        class="nav-btn"
+        aria-current={$page.url.pathname.startsWith('/capture') ? 'page' : undefined}
+      >
+        <span class="nav-icon" aria-hidden="true">📸</span>
+        <span class="nav-label">Capture</span>
+      </a>
+      <a
+        href="/maps"
+        class="nav-btn"
+        aria-current={$page.url.pathname.startsWith('/maps') ? 'page' : undefined}
+      >
+        <span class="nav-icon" aria-hidden="true">🗺️</span>
+        <span class="nav-label">Maps</span>
+      </a>
+      <a
+        href="/outbox"
+        class="nav-btn"
+        aria-current={$page.url.pathname.startsWith('/outbox') ? 'page' : undefined}
+      >
+        <span class="nav-icon" aria-hidden="true">📤</span>
+        <span class="nav-label">Outbox</span>
+      </a>
+    </nav>
+  {/if}
 </div>
 
 <style>
+  :global(:root) {
+    --primary: #0e5f6d;
+    --primary-soft: #2f7f8d;
+    --primary-tint: #e1eef0;
+    --primary-tint-hover: #ecf3f4;
+    --primary-tint-active: #d4e5e8;
+  }
   :global(body) {
     margin: 0;
     font-family: system-ui, -apple-system, sans-serif;
@@ -55,31 +97,104 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.6rem 1rem;
-    background: #1a3c5e;
-    color: white;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .topbar a, .topbar .linklike {
-    color: white;
-    text-decoration: none;
-    margin-left: 0.75rem;
+    padding: 0.35rem 1rem;
+    min-height: 3rem;
+    box-sizing: border-box;
+    background: var(--primary);
   }
   .brand {
+    color: white;
+    text-decoration: none;
     font-weight: 700;
-    margin-left: 0 !important;
   }
-  .linklike {
+  .logout {
     background: none;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 8px;
+    color: white;
     font: inherit;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
     cursor: pointer;
-    padding: 0;
+    transition: background-color 150ms ease-out;
+  }
+  .logout:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .logout:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logout {
+      transition: none;
+    }
   }
   main {
     flex: 1;
     padding: 1rem;
+  }
+  /* Capture only: let the page fill the viewport so its action zone can
+     bottom-anchor into the thumb arc. Scoped by route because flex layout
+     changes margin behavior for every other screen's content. */
+  main.fill {
+    display: flex;
+    flex-direction: column;
+  }
+  .bottom-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    gap: 0.25rem;
+    background: white;
+    border-top: 1px solid #dbe1e8;
+    padding: 0.3rem 0.4rem;
+    padding-bottom: max(0.3rem, env(safe-area-inset-bottom));
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-height: 3rem;
+    padding: 0.25rem 0;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    font: inherit;
+    font-size: 0.72rem;
+    color: #42555b;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+  }
+  .nav-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .nav-btn[aria-current='page'] {
+    color: var(--primary);
+    font-weight: 600;
+    background: var(--primary-tint);
+  }
+  @media (hover: hover) {
+    .nav-btn:hover {
+      background: var(--primary-tint-hover);
+    }
+  }
+  .nav-btn:active {
+    background: var(--primary-tint-active);
+  }
+  .nav-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-btn {
+      transition: none;
+    }
   }
 </style>

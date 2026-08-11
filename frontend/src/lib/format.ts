@@ -6,13 +6,13 @@ import type { TimelineItem, Trip } from './api/types';
 export function contentPath(atId: string): string {
   try {
     const url = new URL(atId);
-    // Strip a leading /<site-id> segment plus the /++api++ marker if present.
-    return url.pathname
-      .replace(/^\/\+\+api\+\+/, '')
-      .replace(/^\//, '')
-      .split('/')
-      .slice(1)
-      .join('/');
+    const segments = url.pathname.split('/').filter((s) => s && s !== '++api++');
+    // Direct backend access (dev proxy) puts the site id first
+    // (/Plone/trips/...); behind the deploy's virtual-host rewrite the
+    // site root is already stripped (/trips/...). All PWA content lives
+    // under the trips folder, so a different first segment is a site id.
+    if (segments[0] && segments[0] !== 'trips') segments.shift();
+    return segments.join('/');
   } catch {
     return atId.replace(/^\//, '');
   }
@@ -20,12 +20,8 @@ export function contentPath(atId: string): string {
 
 /** Proxy-relative browse URL for a backend content URL. */
 export function browseUrl(atId: string): string {
-  try {
-    const url = new URL(atId);
-    return `/++api++${url.pathname.replace(/^\/\+\+api\+\+/, '')}`;
-  } catch {
-    return atId;
-  }
+  if (!/^https?:\/\//.test(atId)) return atId;
+  return `/++api++/${contentPath(atId)}`;
 }
 
 export function tripCoverUrl(trip: Trip): string | null {
@@ -78,6 +74,26 @@ export function formatDate(value: string | null): string {
 
 export function formatCaptureTime(value: string): string {
   return timeFormat.format(new Date(value));
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** ISO datetime -> local-time value for an <input type="datetime-local">. */
+export function toDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return (
+    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}` +
+    `T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+  );
+}
+
+/** <input type="datetime-local"> value -> UTC ISO string; undefined when empty/invalid. */
+export function fromDatetimeLocal(value: string): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 export function formatDateRange(start: string | null, end: string | null): string {

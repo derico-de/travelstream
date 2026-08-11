@@ -90,7 +90,7 @@
     border-radius: 6px;
     border: 1px solid #b8c0cc;
   }
-  button { background: #1a3c5e; color: white; border: none; cursor: pointer; }
+  button { background: var(--primary); color: white; border: none; cursor: pointer; }
   .bundles { list-style: none; padding: 0; display: grid; gap: 0.6rem; margin-top: 1rem; }
   .bundles li {
     display: flex;

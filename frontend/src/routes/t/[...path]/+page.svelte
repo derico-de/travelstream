@@ -48,7 +48,7 @@
     background: #e4e8ee;
   }
   .tabs a.active {
-    background: #1a3c5e;
+    background: var(--primary);
     color: white;
   }
   .new-article {
@@ -56,9 +56,9 @@
     font: inherit;
     padding: 0.4rem 1rem;
     border-radius: 999px;
-    border: 1px dashed #1a3c5e;
+    border: 1px dashed var(--primary);
     background: white;
-    color: #1a3c5e;
+    color: var(--primary);
     cursor: pointer;
   }
 </style>

@@ -11,7 +11,7 @@ export default defineConfig({
         name: 'Travelstream',
         short_name: 'Travelstream',
         description: 'Offline-first travel capture and curation client',
-        theme_color: '#1a3c5e',
+        theme_color: '#0e5f6d',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

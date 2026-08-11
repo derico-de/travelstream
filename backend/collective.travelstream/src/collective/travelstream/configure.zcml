@@ -63,4 +63,7 @@
       type="theme"
       />
 
+
+  <include package=".upgrades" />
+
 </configure>

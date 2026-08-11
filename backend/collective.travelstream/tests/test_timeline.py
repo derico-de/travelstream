@@ -106,14 +106,41 @@ class TestTimelineService:
     def test_membership_is_behavior_marker_not_type(
         self, trips_area, manager_request
     ):
-        # A Document inside the trip has no ITravelCaptured behavior:
-        # it must never appear on the timeline, regardless of type lists.
+        # Membership is the ITravelCaptured marker, never a type list: the
+        # Trip containers live under /trips but carry no marker, so the
+        # household timeline lists their captures, never the trips
+        # themselves.
+        items = manager_request.get("/trips/@travel-timeline").json()["items"]
+        titles = [i["title"] for i in items]
+        assert "Alps" not in titles
+        assert "Coast" not in titles
+
+    def test_articles_appear_on_the_timeline(self, trips_area, manager_request):
+        # Articles carry the captured behavior: they are timeline members
+        # with kind "article", placed by their capture time.
         r = manager_request.post(
-            "/trips/alps", json={"@type": "Document", "title": "Draft article"}
+            "/trips/alps",
+            json={
+                "@type": "Document",
+                "title": "Day one recap",
+                "captured_at": "2026-07-01T20:00:00",
+            },
         )
         assert r.status_code == 201, r.text
         items = manager_request.get("/trips/alps/@travel-timeline").json()["items"]
-        assert "Draft article" not in [i["title"] for i in items]
+        titles = [i["title"] for i in items]
+        assert titles == ["first", "clip", "second", "Day one recap", "third"]
+        by_title = {i["title"]: i for i in items}
+        assert by_title["Day one recap"]["kind"] == "article"
+
+    def test_article_kind_filter(self, trips_area, manager_request):
+        manager_request.post(
+            "/trips/alps", json={"@type": "Document", "title": "Only article"}
+        )
+        items = manager_request.get(
+            "/trips/alps/@travel-timeline?kind=article"
+        ).json()["items"]
+        assert [i["title"] for i in items] == ["Only article"]
 
     def test_items_carry_thumbnail_scales(self, trips_area, manager_request):
         items = manager_request.get(

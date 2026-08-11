@@ -90,6 +90,25 @@ describe('ApiClient auth', () => {
     expect(api.tokens.get()).toBeNull();
   });
 
+  it('creates a Trip in the trips container', async () => {
+    const { fetchFn, calls } = fakeFetch(() => ({
+      '@id': 'http://backend:8080/Plone/trips/alps',
+      '@type': 'Trip',
+      title: 'Alps'
+    }));
+    const api = new ApiClient({ fetchFn, tokenStorage: memoryTokenStorage() });
+
+    const trip = await api.createTrip({ title: 'Alps', start_date: '2026-08-01' });
+    expect(calls[0].url).toBe('/++api++/trips');
+    expect(calls[0].init.method).toBe('POST');
+    expect(JSON.parse(calls[0].init.body as string)).toEqual({
+      '@type': 'Trip',
+      title: 'Alps',
+      start_date: '2026-08-01'
+    });
+    expect(trip.title).toBe('Alps');
+  });
+
   it('resolves backend absolute URLs through the same-origin proxy', () => {
     const api = new ApiClient({ baseUrl: '/++api++' });
     expect(api.resolve('http://backend:8080/plone/trips/alps/@travel-timeline')).toBe(

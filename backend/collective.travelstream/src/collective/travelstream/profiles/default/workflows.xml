@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Bind the travel workflow to Note, Trip and - deliberately, site-wide -
-     stock Image and File (which ship with no workflow in Plone). This is
-     what lets @travel-publish make exactly the embedded media public while
-     the surrounding Trip stays private. Documented in the spec. -->
+     stock Image, File and Document (the article type). Image and File ship
+     with no workflow in Plone; Document's stock simple_publication_workflow
+     guards publish behind "Review portal content", which household editors
+     do not have. This is what lets @travel-publish make exactly the article
+     plus its embedded media public while the surrounding Trip stays
+     private. Documented in the spec. -->
 <object name="portal_workflow" meta_type="Plone Workflow Tool">
   <object name="travelstream_workflow" meta_type="Workflow"/>
   <bindings>
+    <type type_id="Document">
+      <bound-workflow workflow_id="travelstream_workflow"/>
+    </type>
     <type type_id="Image">
       <bound-workflow workflow_id="travelstream_workflow"/>
     </type>

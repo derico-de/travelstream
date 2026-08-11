@@ -15,7 +15,11 @@ export interface OutboxItem {
   id: string;
   kind: CaptureKind;
   state: OutboxState;
-  /** Site-relative path of the Trip the item is filed under. */
+  /**
+   * Site-relative path of the Trip the item is filed under. Empty string
+   * means captured without a trip: the item is held locally (never
+   * drained) until a trip is assigned in the Outbox.
+   */
   tripPath: string;
   title: string;
   /** Note body (kind === 'note' only). */

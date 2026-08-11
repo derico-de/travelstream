@@ -64,7 +64,7 @@
   }
   button {
     padding: 0.6rem;
-    background: #1a3c5e;
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 6px;

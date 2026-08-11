@@ -61,7 +61,7 @@
         source: 'entries',
         filter: ['has', 'point_count'],
         paint: {
-          'circle-color': '#1a3c5e',
+          'circle-color': '#0e5f6d',
           'circle-radius': ['step', ['get', 'point_count'], 16, 10, 22, 50, 28],
           'circle-opacity': 0.85
         }

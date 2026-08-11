@@ -35,3 +35,22 @@ class TestThemeTravelstream:
             "plone.app.theming.interfaces.IThemeSettings.enabled"
         )
         assert enabled is True
+
+    def test_production_css_exists(self):
+        """The manifest's production-css points at a file that ships with the theme."""
+        from plone.app.theming.utils import getTheme
+        from plone.resource.utils import queryResourceDirectory
+
+        theme = getTheme(THEME_ID)
+        prefix = f"/++theme++{THEME_ID}/"
+        assert theme.production_css.lstrip("/").startswith(prefix.lstrip("/"))
+        relative_path = theme.production_css.lstrip("/")[len(prefix.lstrip("/")):]
+
+        directory = queryResourceDirectory("theme", THEME_ID)
+        assert directory.isFile(relative_path), (
+            f"{theme.production_css} is declared in manifest.cfg but "
+            f"{relative_path} does not exist in the theme directory - "
+            "run `npm install && npm run build` in the theme folder"
+        )
+        css = directory.readFile(relative_path)
+        assert b"travel-article-body" in css

@@ -47,16 +47,15 @@ class TestTravelWorkflow:
         assert publish_setup["trip"]["review_state"] == "private"
         assert publish_setup["embedded"]["review_state"] == "private"
 
-    def test_workflow_bound_to_stock_image_and_file(self, portal):
+    def test_workflow_bound_to_travel_types(self, portal):
+        # Document included: its stock simple_publication_workflow guards
+        # publish behind "Review portal content", which household editors
+        # lack — articles must publish with edit rights alone.
         wf = portal.portal_workflow
-        for portal_type in ("Image", "File", "Note", "Trip"):
+        for portal_type in ("Image", "File", "Note", "Trip", "Document"):
             assert wf.getChainForPortalType(portal_type) == (
                 "travelstream_workflow",
             ), portal_type
-
-    def test_document_keeps_its_stock_workflow(self, portal):
-        wf = portal.portal_workflow
-        assert "travelstream_workflow" not in wf.getChainForPortalType("Document")
 
 
 class TestTravelPublish:
@@ -85,6 +84,43 @@ class TestTravelPublish:
         assert r.status_code in (401, 404)
         r = anon_request.get(publish_setup["private"]["@id"])
         assert r.status_code in (401, 404)
+
+    def test_editor_can_publish_article(
+        self, publish_setup, manager_request, request_factory
+    ):
+        # Regression: household members hold Editor (not Reviewer/Manager)
+        # on the trip; publishing an article from the PWA must work for
+        # them.
+        r = manager_request.post(
+            "/@users",
+            json={
+                "username": "housemate",
+                "password": "correct horse battery",
+                "email": "housemate@example.org",
+            },
+        )
+        assert r.status_code == 201, r.text
+        r = manager_request.post(
+            f"{publish_setup['trip']['@id']}/@sharing",
+            json={
+                "entries": [
+                    {
+                        "id": "housemate",
+                        "roles": {"Contributor": True, "Editor": True, "Reader": True},
+                        "type": "user",
+                    }
+                ]
+            },
+        )
+        assert r.status_code == 204, r.text
+
+        session = request_factory(basic_auth=("housemate", "correct horse battery"))
+        r = session.post(
+            f"{publish_setup['article']['@id']}/@travel-publish", json={}
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["all_done"] is True, body
 
     def test_publish_is_idempotent(self, publish_setup, manager_request):
         url = f"{publish_setup['article']['@id']}/@travel-publish"

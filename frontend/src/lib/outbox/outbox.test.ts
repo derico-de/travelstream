@@ -209,6 +209,70 @@ describe('outbox', () => {
     expect(item.state).toBe('done');
   });
 
+  it('holds items captured without a trip until one is assigned (never lost)', async () => {
+    const { outbox, transport } = makeOutbox();
+    const item = await outbox.enqueue({ kind: 'photo', tripPath: '', title: 'orphan', blob: blob() });
+
+    await outbox.drain();
+    expect(transport.uploads).toHaveLength(0);
+    let [stored] = await outbox.list();
+    expect(stored.state).toBe('queued');
+
+    await outbox.assignTrip(item.id, 'trips/alps');
+    await outbox.drain();
+    [stored] = await outbox.list();
+    expect(stored.state).toBe('done');
+    expect(stored.tripPath).toBe('trips/alps');
+  });
+
+  it('amendPosition attaches late GPS but never overwrites EXIF coordinates', async () => {
+    const { outbox } = makeOutbox();
+    const bare = await outbox.enqueue({ kind: 'note', tripPath: '', title: 'n' });
+    const exif = await outbox.enqueue({
+      kind: 'photo', tripPath: '', title: 'p', blob: blob(), latitude: 46.5, longitude: 11.3
+    });
+
+    await outbox.amendPosition(bare.id, { latitude: 47.1, longitude: 12.2 });
+    await outbox.amendPosition(exif.id, { latitude: 0, longitude: 0 });
+    await outbox.amendPosition(bare.id, {}); // no fix acquired - no-op
+
+    const items = await outbox.list();
+    const byTitle = Object.fromEntries(items.map((i) => [i.title, i]));
+    expect(byTitle.n.latitude).toBe(47.1);
+    expect(byTitle.p.latitude).toBe(46.5);
+  });
+
+  it('retryAll re-queues every failed item, including permanently parked ones', async () => {
+    const { outbox, transport } = makeOutbox();
+    // Two permanent failures (e.g. the 404 era) plus one healthy item.
+    transport.failures.set('stuck1', { times: 1, permanent: true });
+    transport.failures.set('stuck2', { times: 1, permanent: true });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'stuck1', blob: blob() });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'stuck2', blob: blob() });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'ok', blob: blob() });
+    await outbox.drain();
+
+    let items = await outbox.list();
+    expect(items.filter((i) => i.state === 'failed')).toHaveLength(2);
+
+    await outbox.retryAll();
+    items = await outbox.list();
+    expect(items.every((i) => i.state === 'done')).toBe(true);
+  });
+
+  it('clearDone removes finished items and keeps the rest', async () => {
+    const { outbox, transport } = makeOutbox();
+    transport.failures.set('bad', { times: 99, permanent: true });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'good', blob: blob() });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'bad', blob: blob() });
+    await outbox.drain();
+
+    await outbox.clearDone();
+    const items = await outbox.list();
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('bad');
+  });
+
   it('manual delete removes a failed item', async () => {
     const { outbox, transport } = makeOutbox();
     transport.failures.set('junk', { times: 99, permanent: true });

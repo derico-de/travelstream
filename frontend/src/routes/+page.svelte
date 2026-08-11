@@ -14,14 +14,17 @@
   });
 </script>
 
-<h1>Trips</h1>
+<div class="head">
+  <h1>Trips</h1>
+  <a class="add" href="/trips/new">+ New trip</a>
+</div>
 
 {#if error}
   <p class="error">{error}</p>
 {:else if trips === null}
   <p>Loading trips...</p>
 {:else if trips.length === 0}
-  <p>No trips yet. Create one in Plone to get started.</p>
+  <p>No trips yet. <a href="/trips/new">Create your first trip</a>.</p>
 {:else}
   <ul class="trips">
     {#each trips as trip (trip['@id'])}
@@ -43,6 +46,19 @@
 {/if}
 
 <style>
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .add {
+    padding: 0.45rem 0.9rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
   .trips {
     list-style: none;
     padding: 0;
@@ -63,7 +79,7 @@
     height: 9rem;
     object-fit: cover;
     display: block;
-    background: linear-gradient(120deg, #35608c, #1a3c5e);
+    background: linear-gradient(120deg, var(--primary-soft), var(--primary));
   }
   .meta {
     display: flex;

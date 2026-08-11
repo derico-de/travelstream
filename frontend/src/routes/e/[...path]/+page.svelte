@@ -1,7 +1,13 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { api } from '$lib/session';
-  import { browseUrl, formatCaptureTime } from '$lib/format';
+  import {
+    browseUrl,
+    contentPath,
+    formatCaptureTime,
+    fromDatetimeLocal,
+    toDatetimeLocal
+  } from '$lib/format';
 
   interface Entry {
     '@id': string;
@@ -24,6 +30,7 @@
   let title = $state('');
   let description = $state('');
   let noteText = $state('');
+  let capturedAt = $state('');
   let saving = $state(false);
   let flash = $state('');
   let error = $state('');
@@ -36,8 +43,18 @@
         title = data.title;
         description = data.description ?? '';
         noteText = data.text ?? '';
+        capturedAt = toDatetimeLocal(data.captured_at);
       })
       .catch(() => (error = 'Could not load this entry.'));
+  });
+
+  /** Timeline of the trip this entry lives in. */
+  const backHref = $derived.by(() => {
+    const parent = entry?.parent?.['@id'];
+    const tripPath = parent
+      ? contentPath(parent)
+      : path.split('/').slice(0, -1).join('/');
+    return `/t/${tripPath}`;
   });
 
   function mediaUrl(): string | null {
@@ -66,9 +83,15 @@
     saving = true;
     flash = '';
     try {
-      const payload: Record<string, unknown> = { title, description };
+      const payload: Record<string, unknown> = {
+        title,
+        description,
+        // Cleared field falls back to the upload time (backend policy).
+        captured_at: fromDatetimeLocal(capturedAt) ?? null
+      };
       if (entry['@type'] === 'Note') payload.text = noteText;
       await api.patch(entry['@id'], payload);
+      entry.captured_at = fromDatetimeLocal(capturedAt) ?? null;
       flash = 'Saved.';
     } catch {
       flash = 'Saving failed.';
@@ -83,6 +106,7 @@
 {:else if !entry}
   <p>Loading...</p>
 {:else}
+  <a class="back" href={backHref}>← Timeline</a>
   <article>
     {#if entry['@type'] === 'Image'}
       <img class="media" src={mediaUrl()} alt={entry.title} />
@@ -110,6 +134,10 @@
         Description
         <textarea rows="2" bind:value={description}></textarea>
       </label>
+      <label>
+        Captured at
+        <input type="datetime-local" bind:value={capturedAt} />
+      </label>
       {#if entry['@type'] === 'Note'}
         <label>
           Text
@@ -123,6 +151,16 @@
 {/if}
 
 <style>
+  .back {
+    display: inline-block;
+    margin-bottom: 0.7rem;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    background: #e4e8ee;
+    color: #1c2430;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
   .media {
     width: 100%;
     max-height: 60dvh;
@@ -147,7 +185,7 @@
     border: 1px solid #b8c0cc;
   }
   button {
-    background: #1a3c5e;
+    background: var(--primary);
     color: white;
     border: none;
     cursor: pointer;

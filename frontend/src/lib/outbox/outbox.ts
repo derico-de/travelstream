@@ -101,6 +101,9 @@ export class Outbox {
   /** Items awaiting drain right now (queued, or failed with elapsed backoff). */
   private drainable(item: OutboxItem, now: number): boolean {
     if (item.pendingAttachment) return false;
+    // Captured without a trip: the item is safe locally and waits for
+    // assignment (never lose a capture over a missing decision).
+    if (!item.tripPath) return false;
     if (item.state === 'queued') return true;
     if (item.state === 'failed') {
       if (item.attempts >= this.maxAutoAttempts) return false;
@@ -179,6 +182,30 @@ export class Outbox {
     this.changed();
   }
 
+  /** Assign a trip to an item captured without one; it becomes drainable. */
+  async assignTrip(id: string, tripPath: string): Promise<void> {
+    const item = await this.store.get(id);
+    if (!item || item.state === 'done' || item.state === 'uploading' || !tripPath) return;
+    await this.store.update(id, { tripPath, error: undefined });
+    this.changed();
+  }
+
+  /**
+   * Attach a late-arriving GPS position (capture enqueues instantly; the
+   * position is fetched in the background). Skipped once the item is in
+   * flight or delivered - best-effort, never blocking.
+   */
+  async amendPosition(id: string, position: { latitude?: number; longitude?: number }): Promise<void> {
+    if (position.latitude === undefined || position.longitude === undefined) return;
+    const item = await this.store.get(id);
+    if (!item || item.state === 'done' || item.state === 'uploading') return;
+    if (item.latitude !== undefined) return; // EXIF or an earlier fix wins
+    await this.store.update(id, {
+      latitude: position.latitude,
+      longitude: position.longitude
+    });
+  }
+
   /** Manual retry: clears backoff and drains immediately. */
   async retry(id: string): Promise<void> {
     const item = await this.store.get(id);
@@ -197,5 +224,30 @@ export class Outbox {
   async delete(id: string): Promise<void> {
     await this.store.delete(id);
     this.changed();
+  }
+
+  /** Re-queue every failed item (including permanently parked ones) and drain. */
+  async retryAll(): Promise<void> {
+    const failed = (await this.store.list()).filter((i) => i.state === 'failed');
+    if (failed.length === 0) return;
+    for (const item of failed) {
+      await this.store.update(item.id, {
+        state: 'queued',
+        attempts: 0,
+        nextAttemptAt: undefined,
+        error: undefined
+      });
+    }
+    this.changed();
+    await this.drain();
+  }
+
+  /** Remove finished items from the list; their content is on the server. */
+  async clearDone(): Promise<void> {
+    const done = (await this.store.list()).filter((i) => i.state === 'done');
+    for (const item of done) {
+      await this.store.delete(item.id);
+    }
+    if (done.length > 0) this.changed();
   }
 }

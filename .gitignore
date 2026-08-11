@@ -2,3 +2,6 @@
 .scratch/
 node_modules/
 .pnpm-store/
+deploy/.env
+deploy/backups/
+frontend/.impeccable/

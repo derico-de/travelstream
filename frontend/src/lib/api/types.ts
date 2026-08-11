@@ -87,6 +87,21 @@ export interface Trip {
   image?: ImageFieldScales | null;
 }
 
+/** Fields the PWA sends when creating a Trip. */
+export interface NewTrip {
+  title: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  /** Optional cover image (plone.leadimage), base64-encoded. */
+  image?: {
+    data: string;
+    encoding: 'base64';
+    filename: string;
+    'content-type': string;
+  };
+}
+
 export interface ContentSummary {
   '@id': string;
   '@type': string;

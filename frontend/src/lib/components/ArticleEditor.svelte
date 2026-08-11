@@ -3,7 +3,7 @@
   import { travelExtensions } from '@travelstream/tiptap-schema';
 
   import { api } from '$lib/session';
-  import { contentPath } from '$lib/format';
+  import { contentPath, fromDatetimeLocal, toDatetimeLocal } from '$lib/format';
   import type { PublishResponse } from '$lib/api/types';
   import TimelinePicker from './TimelinePicker.svelte';
 
@@ -14,6 +14,7 @@
     title: string;
     review_state: string | null;
     prosemirror_doc: object | null;
+    captured_at?: string | null;
     parent?: { '@id': string };
   }
 
@@ -28,10 +29,15 @@
   // Bumped on every editor transaction so toolbar active states refresh.
   let editorTick = $state(0);
 
+  let capturedAt = $state('');
+
   $effect(() => {
     api
       .get<Article>(`/${path}`)
-      .then((data) => (article = data))
+      .then((data) => {
+        article = data;
+        capturedAt = toDatetimeLocal(data.captured_at);
+      })
       .catch(() => (error = 'Could not load the article.'));
   });
 
@@ -72,7 +78,9 @@
       // Only the ProseMirror JSON is written - no HTML anywhere.
       await api.patch(article['@id'], {
         prosemirror_doc: doc,
-        embedded_entries: embeddedUids(doc)
+        embedded_entries: embeddedUids(doc),
+        // Timeline placement; cleared falls back to the creation time.
+        captured_at: fromDatetimeLocal(capturedAt) ?? null
       });
       flash = 'Saved.';
     } catch {
@@ -130,10 +138,16 @@
   <p>Loading article...</p>
 {:else}
   <div class="editor-page">
+    <a class="back" href={`/t/${tripPath}`}>← Timeline</a>
     <div class="header">
       <h1>{article.title}</h1>
       <span class="state">{article.review_state}</span>
     </div>
+
+    <label class="captured">
+      Captured at
+      <input type="datetime-local" bind:value={capturedAt} />
+    </label>
 
     {#if editor}
       {#key editorTick}
@@ -210,6 +224,30 @@
 {/if}
 
 <style>
+  .back {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    background: #e4e8ee;
+    color: #1c2430;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .captured {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.9rem;
+    color: #5a6676;
+  }
+  .captured input {
+    font: inherit;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #b8c0cc;
+  }
   .header {
     display: flex;
     align-items: baseline;
@@ -235,7 +273,7 @@
     background: white;
     cursor: pointer;
   }
-  .toolbar button.on { background: #1a3c5e; color: white; }
+  .toolbar button.on { background: var(--primary); color: white; }
   .surface {
     background: white;
     border-radius: 10px;
@@ -263,7 +301,7 @@
     background: white;
     cursor: pointer;
   }
-  .actions .primary { background: #1a3c5e; color: white; border: none; }
+  .actions .primary { background: var(--primary); color: white; border: none; }
   .flash { color: #14691b; }
   .publish-result { color: #5a6676; font-size: 0.85rem; }
   .error { color: #b3261e; }
