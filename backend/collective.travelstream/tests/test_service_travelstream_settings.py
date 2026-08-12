@@ -21,3 +21,22 @@ class TestServiceTravelstreamSettingsService:
         from collective.travelstream.services.travelstream_settings import TravelstreamSettingsService
 
         assert TravelstreamSettingsService is not None
+
+    def _service(self):
+        from collective.travelstream.services.travelstream_settings import TravelstreamSettingsService
+
+        service = TravelstreamSettingsService()
+        service.context = self.portal
+        service.request = self.layer["request"]
+        return service
+
+    def test_manager_can_add_keywords(self):
+        """Managers are in plone.roles_allowed_to_add_keywords by default."""
+        reply = self._service().reply()
+        assert reply["can_add_keywords"] is True
+
+    def test_member_cannot_add_keywords(self):
+        """Plain members are not allowed to create new keywords."""
+        setRoles(self.portal, TEST_USER_ID, ["Member"])
+        reply = self._service().reply()
+        assert reply["can_add_keywords"] is False

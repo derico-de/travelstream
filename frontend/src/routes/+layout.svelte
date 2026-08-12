@@ -2,10 +2,52 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { authenticated, keepSessionFresh, logout } from '$lib/session';
+  import { api, authenticated, keepSessionFresh, logout } from '$lib/session';
   import { startOutboxDraining } from '$lib/outbox';
+  import OutboxStatus from '$lib/components/OutboxStatus.svelte';
 
   let { children } = $props();
+
+  // Trip context of the current route: /t/<trip>, /trips/edit/<trip>, or
+  // the parent of an entry (/e/) or article (/a/) path.
+  const tripPath = $derived.by(() => {
+    const pathname = decodeURIComponent($page.url.pathname);
+    if (pathname.startsWith('/t/')) return pathname.slice(3);
+    if (pathname.startsWith('/trips/edit/')) return pathname.slice('/trips/edit/'.length);
+    if (pathname.startsWith('/e/') || pathname.startsWith('/a/')) {
+      const segments = pathname.slice(3).split('/').filter(Boolean);
+      segments.pop();
+      return segments.join('/');
+    }
+    return '';
+  });
+
+  const tripTitles = new Map<string, string>();
+  let tripTitle = $state('');
+
+  $effect(() => {
+    const path = tripPath.replace(/\/$/, '');
+    if (!path || path === 'trips') {
+      tripTitle = '';
+      return;
+    }
+    const cached = tripTitles.get(path);
+    if (cached !== undefined) {
+      tripTitle = cached;
+      return;
+    }
+    tripTitle = '';
+    api
+      .get<{ '@type'?: string; title?: string }>(`/${path}`)
+      .then((data) => {
+        // Only genuine Trips get their name in the bar (an entry directly
+        // under the trips folder would resolve to the folder itself).
+        const title = data['@type'] === 'Trip' ? (data.title ?? '') : '';
+        tripTitles.set(path, title);
+        if (tripPath.replace(/\/$/, '') === path) tripTitle = title;
+      })
+      .catch(() => {});
+  });
 
   onMount(() => {
     keepSessionFresh();
@@ -24,7 +66,13 @@
   {#if $authenticated}
     <header class="topbar">
       <a href="/" class="brand">Travelstream</a>
-      <button class="logout" onclick={() => logout()}>Log out</button>
+      {#if tripTitle}
+        <a class="trip-name" href={`/t/${tripPath}`}>{tripTitle}</a>
+      {/if}
+      <div class="topbar-actions">
+        <OutboxStatus />
+        <button class="logout" onclick={() => logout()}>Log out</button>
+      </div>
     </header>
   {/if}
   <main class:fill={$page.url.pathname.startsWith('/capture')}>
@@ -60,14 +108,6 @@
         <span class="nav-icon" aria-hidden="true">🗺️</span>
         <span class="nav-label">Maps</span>
       </a>
-      <a
-        href="/outbox"
-        class="nav-btn"
-        aria-current={$page.url.pathname.startsWith('/outbox') ? 'page' : undefined}
-      >
-        <span class="nav-icon" aria-hidden="true">📤</span>
-        <span class="nav-label">Outbox</span>
-      </a>
     </nav>
   {/if}
 </div>
@@ -94,6 +134,7 @@
     flex-direction: column;
   }
   .topbar {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -102,10 +143,34 @@
     box-sizing: border-box;
     background: var(--primary);
   }
+  /* Centered over the whole bar, clipped before it can touch the brand
+     or the actions on narrow screens. */
+  .trip-name {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 38%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .trip-name:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
   .brand {
     color: white;
     text-decoration: none;
     font-weight: 700;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   .logout {
     background: none;

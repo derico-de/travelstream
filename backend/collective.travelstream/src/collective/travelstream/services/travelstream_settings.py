@@ -25,4 +25,20 @@ class TravelstreamSettingsService(Service):
                     "message": "Authentication required",
                 }
             }
-        return {"article_type": article_portal_type()}
+        return {
+            "article_type": article_portal_type(),
+            "can_add_keywords": self._can_add_keywords(),
+        }
+
+    def _can_add_keywords(self):
+        """May the current user create new keywords (tags)?
+
+        Same rule as Plone's Classic UI keywords widget: the user needs
+        one of the roles in ``plone.roles_allowed_to_add_keywords``.
+        """
+        allowed_roles = api.portal.get_registry_record(
+            "plone.roles_allowed_to_add_keywords", default=[]
+        )
+        user = api.user.get_current()
+        roles = set(user.getRolesInContext(self.context))
+        return bool(roles.intersection(allowed_roles))

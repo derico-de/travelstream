@@ -116,4 +116,15 @@ describe('ApiClient auth', () => {
     );
     expect(api.resolve('/@login')).toBe('/++api++/@login');
   });
+
+  it('keeps the query string of batch links (b_start would be lost)', () => {
+    const api = new ApiClient({ baseUrl: '/++api++' });
+    expect(
+      api.resolve('http://backend:8080/plone/trips/alps/@travel-timeline?b_size=25&b_start=25')
+    ).toBe('/++api++/plone/trips/alps/@travel-timeline?b_size=25&b_start=25');
+    // Virtual-host rewritten URLs already carry the proxy prefix.
+    expect(
+      api.resolve('https://site.example/++api++/trips/alps/@travel-timeline?b_start=25')
+    ).toBe('/++api++/trips/alps/@travel-timeline?b_start=25');
+  });
 });

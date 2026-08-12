@@ -8,6 +8,7 @@
   <property name="behaviors" purge="False">
     <element value="collective.travelstream.article"/>
     <element value="collective.travelstream.captured"/>
+    <element value="plone.leadimage"/>
   </property>
   <property name="default_view">travel-article-view</property>
   <property name="view_methods" purge="False">

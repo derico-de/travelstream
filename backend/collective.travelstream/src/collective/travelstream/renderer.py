@@ -16,7 +16,24 @@ import html
 
 IMAGE_SCALES = {"thumb", "mini", "preview", "teaser", "large", "larger", "great", "huge"}
 DEFAULT_IMAGE_SCALE = "large"
+# Plone picture variant per requested scale (registry plone.picture_variants:
+# small renders from "preview", medium from "teaser", large from "larger").
+# The variant name travels on the img as data-picturevariant; the article
+# view runs Plone's PictureVariantsFilter at render time to expand it into
+# a <picture> tag with the registry-defined srcset.
+PICTURE_VARIANT_BY_SCALE = {
+    "thumb": "small",
+    "mini": "small",
+    "preview": "small",
+    "teaser": "medium",
+    "large": "large",
+    "larger": "large",
+    "great": "large",
+    "huge": "large",
+}
 POSTER_SCALE = "large"
+GALLERY_TILE_SCALE = "teaser"
+GALLERY_LINK_SCALE = "great"
 
 _MARK_TAGS = {
     "bold": "strong",
@@ -81,11 +98,12 @@ def _travel_image(node):
         scale = DEFAULT_IMAGE_SCALE
     alt = _esc(attrs.get("alt") or "")
     src = f"resolveuid/{uid}/@@images/image/{scale}"
+    variant = PICTURE_VARIANT_BY_SCALE[scale]
     caption = attrs.get("caption")
     caption_html = f"<figcaption>{_esc(caption)}</figcaption>" if caption else ""
     return (
         f'<figure class="travel-image">'
-        f'<img src="{src}" alt="{alt}" loading="lazy">'
+        f'<img src="{src}" alt="{alt}" loading="lazy" data-picturevariant="{variant}">'
         f"{caption_html}</figure>"
     )
 
@@ -95,7 +113,9 @@ def _travel_video(node):
     uid = _esc(attrs.get("uid") or "")
     if not uid:
         return _unknown(node)
-    src = f"resolveuid/{uid}/@@download/file"
+    # @@display-media, not @@download: attachment disposition suppresses
+    # inline playback UI in Firefox (see views/display_media.py).
+    src = f"resolveuid/{uid}/@@display-media/file"
     poster = f"resolveuid/{uid}/@@images/image/{POSTER_SCALE}"
     caption = attrs.get("caption")
     caption_html = f"<figcaption>{_esc(caption)}</figcaption>" if caption else ""
@@ -103,6 +123,48 @@ def _travel_video(node):
         f'<figure class="travel-video">'
         f'<video controls preload="metadata" src="{src}" poster="{poster}"></video>'
         f"{caption_html}</figure>"
+    )
+
+
+def _travel_gallery(node):
+    # plone.gallery markup contract: flexbin lays out the tile grid,
+    # Spotlight zooms every `a.spotlight` (grouped per `.spotlight-group`).
+    # Videos stay plain links, played inline by the browser via
+    # @@display-media (the bundled Spotlight has no video support); their
+    # play badge is styled by the addon's own tiny bundle.
+    # Items without a uid are skipped; any kind other than "video" renders
+    # as an image. An all-skipped list still yields the (empty) figure.
+    attrs = node.get("attrs") or {}
+    items = attrs.get("items")
+    if not isinstance(items, list):
+        items = []
+    parts = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        uid = _esc(item.get("uid") or "")
+        if not uid:
+            continue
+        alt = _esc(item.get("alt") or "")
+        img = (
+            f'<img src="resolveuid/{uid}/@@images/image/{GALLERY_TILE_SCALE}" '
+            f'alt="{alt}" loading="lazy">'
+        )
+        if item.get("kind") == "video":
+            parts.append(
+                f'<a class="travel-gallery-item-video" '
+                f'href="resolveuid/{uid}/@@display-media/file">{img}'
+                f'<span class="travel-gallery-play" aria-hidden="true">▶</span></a>'
+            )
+        else:
+            title_attr = f' data-title="{alt}"' if alt else ""
+            parts.append(
+                f'<a class="spotlight"{title_attr} '
+                f'href="resolveuid/{uid}/@@images/image/{GALLERY_LINK_SCALE}">{img}</a>'
+            )
+    return (
+        f'<figure class="travel-gallery flexbin flexbin-margin spotlight-group">'
+        f'{"".join(parts)}</figure>'
     )
 
 
@@ -126,6 +188,7 @@ _RENDERERS = {
     "horizontalRule": lambda node: "<hr>",
     "travelImage": _travel_image,
     "travelVideo": _travel_video,
+    "travelGallery": _travel_gallery,
 }
 
 
@@ -148,6 +211,38 @@ def render_document(doc):
     if doc.get("type") == "doc":
         return _children(doc)
     return _node(doc)
+
+
+def extract_media_uids(doc):
+    """UIDs of every media node in the document, in encounter order.
+
+    The canonical source for "what does this article embed": images,
+    videos and gallery items. Used by publishing to expose exactly the
+    embedded set, independent of the client-maintained relation list.
+    """
+    uids = []
+
+    def add(uid):
+        if uid and uid not in uids:
+            uids.append(uid)
+
+    def walk(node):
+        if not isinstance(node, dict):
+            return
+        node_type = node.get("type")
+        attrs = node.get("attrs") or {}
+        if node_type in ("travelImage", "travelVideo"):
+            add(attrs.get("uid"))
+        elif node_type == "travelGallery":
+            items = attrs.get("items")
+            for item in items if isinstance(items, list) else []:
+                if isinstance(item, dict):
+                    add(item.get("uid"))
+        for child in node.get("content") or []:
+            walk(child)
+
+    walk(doc)
+    return uids
 
 
 def extract_text(doc):

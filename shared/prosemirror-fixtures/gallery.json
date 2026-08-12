@@ -1,0 +1,41 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Best of the day:"
+        }
+      ]
+    },
+    {
+      "type": "travelGallery",
+      "attrs": {
+        "items": [
+          {
+            "uid": "0123456789abcdef0123456789abcdef",
+            "kind": "photo",
+            "alt": "Black sand beach"
+          },
+          {
+            "uid": "fedcba9876543210fedcba9876543210",
+            "kind": "video",
+            "alt": "Waves rolling in"
+          },
+          {
+            "uid": "abcdefabcdefabcdefabcdefabcdefab",
+            "kind": "sketch",
+            "alt": "Unknown kind renders as image"
+          },
+          {
+            "uid": null,
+            "kind": "photo",
+            "alt": "Missing uid is skipped"
+          }
+        ]
+      }
+    }
+  ]
+}

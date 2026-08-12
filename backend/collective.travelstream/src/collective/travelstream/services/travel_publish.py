@@ -1,11 +1,15 @@
 """@travel-publish REST API service.
 
 Executes the publish (or retract) workflow transition on the article and
-on every related entry it embeds (from the ITravelArticle relations), in
-one request. Idempotent; reports per-object results. Drafts referencing
-private media stay safe: publishing exposes exactly the embedded set.
+on every entry it embeds (canonical document UIDs merged with the
+ITravelArticle relations), in one request. Idempotent; reports per-object
+results. Drafts referencing private media stay safe: publishing exposes
+exactly the embedded set. Media transitions first so the report shows
+real per-object outcomes (publishing the article also triggers the
+embedded-media subscriber, which by then finds nothing left to do).
 """
 
+from collective.travelstream.publishing import embedded_media_objects
 from plone import api
 from plone.protect.interfaces import IDisableCSRFProtection
 from plone.restapi.deserializer import json_body
@@ -43,12 +47,10 @@ class TravelPublishService(Service):
                 }
             }
 
-        objects = [self.context]
+        objects = []
         if data.get("include_media", True):
-            for relation in getattr(self.context, "embedded_entries", None) or []:
-                target = relation.to_object
-                if target is not None:
-                    objects.append(target)
+            objects.extend(embedded_media_objects(self.context))
+        objects.append(self.context)
 
         results = [self._transition_one(obj, transition) for obj in objects]
         ok = all(r["status"] in ("done", "unchanged") for r in results)

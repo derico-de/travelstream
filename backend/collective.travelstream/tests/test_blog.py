@@ -1,4 +1,4 @@
-"""Ticket 15: blog collection + theme."""
+"""Ticket 15: blog collection."""
 
 import pytest
 
@@ -69,24 +69,13 @@ class TestBlogCollection:
         assert r.status_code == 200
         assert "Northern lights" in r.text
 
-    def test_article_page_renders_in_theme_for_anonymous(
+    def test_article_page_renders_for_anonymous(
         self, published_article, request_factory
     ):
         anon_html = request_factory(api=False)
         r = anon_html.get(published_article["@id"], headers={"Accept": "text/html"})
         assert r.status_code == 200
         assert "Published words." in r.text
-
-
-class TestTheme:
-    def test_theme_enabled(self, portal):
-        from plone.registry.interfaces import IRegistry
-        from zope.component import getUtility
-
-        registry = getUtility(IRegistry)
-        assert registry["plone.app.theming.interfaces.IThemeSettings.rules"] == (
-            "/++theme++travelstream/rules.xml"
-        )
 
 
 class TestTripsArea:

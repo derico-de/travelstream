@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { api } from '$lib/session';
+  import TagsInput from '$lib/components/TagsInput.svelte';
   import {
     browseUrl,
     contentPath,
@@ -19,6 +20,7 @@
     latitude?: number | null;
     longitude?: number | null;
     review_state?: string | null;
+    subjects?: string[];
     image?: { download: string; scales: Record<string, { download: string }> };
     file?: { download: string; 'content-type': string };
     parent?: { '@id': string };
@@ -31,6 +33,9 @@
   let description = $state('');
   let noteText = $state('');
   let capturedAt = $state('');
+  let subjects = $state<string[]>([]);
+  let keywordSuggestions = $state<string[]>([]);
+  let canAddKeywords = $state(false);
   let saving = $state(false);
   let flash = $state('');
   let error = $state('');
@@ -44,8 +49,14 @@
         description = data.description ?? '';
         noteText = data.text ?? '';
         capturedAt = toDatetimeLocal(data.captured_at);
+        subjects = data.subjects ?? [];
       })
       .catch(() => (error = 'Could not load this entry.'));
+  });
+
+  $effect(() => {
+    api.keywords().then((items) => (keywordSuggestions = items)).catch(() => {});
+    api.settings().then((s) => (canAddKeywords = s.can_add_keywords)).catch(() => {});
   });
 
   /** Timeline of the trip this entry lives in. */
@@ -67,7 +78,9 @@
         : `${browseUrl(entry['@id'])}/${download}`;
     }
     if (entry.file) {
-      return `${browseUrl(entry['@id'])}/@@download/file`;
+      // @@display-media, not @@download: attachment disposition
+      // suppresses inline playback UI in Firefox.
+      return `${browseUrl(entry['@id'])}/@@display-media/file`;
     }
     return null;
   }
@@ -86,6 +99,7 @@
       const payload: Record<string, unknown> = {
         title,
         description,
+        subjects,
         // Cleared field falls back to the upload time (backend policy).
         captured_at: fromDatetimeLocal(capturedAt) ?? null
       };
@@ -106,7 +120,7 @@
 {:else if !entry}
   <p>Loading...</p>
 {:else}
-  <a class="back" href={backHref}>← Timeline</a>
+  <a class="back" href={backHref}>← Trip</a>
   <article>
     {#if entry['@type'] === 'Image'}
       <img class="media" src={mediaUrl()} alt={entry.title} />
@@ -138,6 +152,14 @@
         Captured at
         <input type="datetime-local" bind:value={capturedAt} />
       </label>
+      <div class="field">
+        <span class="field-label">Tags</span>
+        <TagsInput
+          bind:value={subjects}
+          suggestions={keywordSuggestions}
+          canCreate={canAddKeywords}
+        />
+      </div>
       {#if entry['@type'] === 'Note'}
         <label>
           Text
@@ -178,6 +200,8 @@
   .capture-meta { color: #5a6676; font-size: 0.85rem; }
   form { display: flex; flex-direction: column; gap: 0.7rem; max-width: 28rem; }
   label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
+  .field-label { font-size: 0.9rem; }
   input, textarea, button {
     font: inherit;
     padding: 0.5rem;

@@ -1,0 +1,36 @@
+/* Structural styles for markup the addon renders into article bodies.
+   Gallery layout and zoom come from plone.gallery (flexbin + Spotlight);
+   this only covers the video-tile play badge, which plone.gallery has no
+   concept of. Everything else is left to the site's theme. */
+
+/* Media embeds never grow past the content column. Videos get no sizing
+   at all from Barceloneta; picture-variant images can have intrinsic
+   widths larger than the column. */
+figure.travel-video video,
+figure.travel-image img {
+  max-width: 100%;
+  height: auto;
+}
+
+figure.travel-gallery .travel-gallery-item-video {
+  position: relative;
+  display: block;
+}
+
+/* Centered play disc: videos must be unmissable among photo tiles. */
+figure.travel-gallery .travel-gallery-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(10, 16, 24, 0.55);
+  color: #fff;
+  font-size: 1rem;
+  padding-left: 2px; /* optically center the triangle */
+  box-sizing: border-box;
+  pointer-events: none;
+}

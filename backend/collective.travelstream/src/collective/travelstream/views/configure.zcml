@@ -16,6 +16,13 @@
       />
 
   <browser:page
+      name="display-media"
+      for="*"
+      class=".display_media.DisplayMedia"
+      permission="zope2.View"
+      />
+
+  <browser:page
       name="travel-article-view"
       for="collective.travelstream.behaviors.itravelarticle.ITravelArticle"
       class=".travel_article_view.TravelArticleView"

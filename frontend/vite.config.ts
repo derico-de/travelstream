@@ -23,7 +23,20 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/\+\+api\+\+/, /^\/@@/]
+        navigateFallbackDenylist: [/^\/\+\+api\+\+/, /^\/@@/],
+        runtimeCaching: [
+          {
+            // Hashed image scales are content-addressed (the hash changes
+            // when the image does), so cache-first is safe indefinitely.
+            urlPattern: /\/\+\+api\+\+\/.*\/@@images\/[^/]+-\d+-[0-9a-f]+\.\w+$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'plone-image-scales',
+              expiration: { maxEntries: 500, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [200] }
+            }
+          }
+        ]
       }
     })
   ],

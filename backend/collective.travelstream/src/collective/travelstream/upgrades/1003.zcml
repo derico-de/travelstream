@@ -1,0 +1,31 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    i18n_domain="collective.travelstream">
+
+  <genericsetup:registerProfile
+      name="1003"
+      title="collective.travelstream: upgrade to 1003"
+      directory="1003"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:upgradeSteps
+      source="1002"
+      destination="1003"
+      profile="collective.travelstream:default">
+
+    <genericsetup:upgradeStep
+        title="Article lead image"
+        description="Add the plone.leadimage behavior to Document so articles carry a cover image editable from the PWA"
+        handler=".v1003.upgrade"
+        />
+
+    <genericsetup:upgradeDepends
+        title="Apply profile version 1003"
+        import_profile="collective.travelstream.upgrades:1003"
+        />
+
+  </genericsetup:upgradeSteps>
+
+</configure>

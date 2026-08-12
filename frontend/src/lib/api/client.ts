@@ -14,7 +14,8 @@ import type {
   TimelineFilters,
   TimelineResponse,
   TravelstreamSettings,
-  Trip
+  Trip,
+  VocabularyResponse
 } from './types';
 
 export interface TokenStorage {
@@ -97,13 +98,13 @@ export class ApiClient {
 
   /** Resolve a path or absolute content URL against the API base. */
   resolve(pathOrUrl: string): string {
-    if (pathOrUrl.startsWith(this.baseUrl)) return pathOrUrl;
     if (/^https?:\/\//.test(pathOrUrl)) {
-      // Absolute content URL from the backend: keep only the path so the
-      // same-origin proxy handles it.
+      // Absolute content URL from the backend: keep path and query (batch
+      // links carry b_start there) so the same-origin proxy handles it.
       const url = new URL(pathOrUrl);
-      return `${this.baseUrl}${url.pathname}`;
+      pathOrUrl = `${url.pathname}${url.search}`;
     }
+    if (pathOrUrl.startsWith(this.baseUrl)) return pathOrUrl;
     return `${this.baseUrl}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
   }
 
@@ -256,6 +257,14 @@ export class ApiClient {
 
   settings(): Promise<TravelstreamSettings> {
     return this.get<TravelstreamSettings>('/@travelstream-settings');
+  }
+
+  /** All existing keywords (tags) on the site. */
+  async keywords(): Promise<string[]> {
+    const result = await this.get<VocabularyResponse>(
+      '/@vocabularies/plone.app.vocabularies.Keywords?b_size=1000'
+    );
+    return result.items.map((term) => term.title);
   }
 
   publish(articleUrl: string, transition: 'publish' | 'retract' = 'publish'): Promise<PublishResponse> {

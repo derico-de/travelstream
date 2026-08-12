@@ -17,6 +17,11 @@ class TestSetup:
         installer = api.addon.get_installer(self.portal)
         assert installer.is_product_installed("collective.travelstream")
 
+    def test_plone_gallery_installed_by_default(self):
+        """Installing the addon pulls in plone.gallery (profile dependency)."""
+        installer = api.addon.get_installer(self.portal)
+        assert installer.is_product_installed("plone.gallery")
+
     def test_browserlayer(self):
         """Test browserlayer is registered."""
         # Add an actual browserlayer check if your addon registers one, e.g.:

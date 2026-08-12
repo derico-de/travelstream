@@ -26,4 +26,18 @@
       handler=".article_type_changed.handler"
       />
 
+  <!-- A published article's embedded media is published: on the publish
+       transition (any path) and on edits of already-published articles. -->
+  <subscriber
+      for="collective.travelstream.behaviors.itravelarticle.ITravelArticle
+           Products.DCWorkflow.interfaces.IAfterTransitionEvent"
+      handler=".publish_embedded_media.article_transitioned"
+      />
+
+  <subscriber
+      for="collective.travelstream.behaviors.itravelarticle.ITravelArticle
+           zope.lifecycleevent.interfaces.IObjectModifiedEvent"
+      handler=".publish_embedded_media.article_modified"
+      />
+
 </configure>

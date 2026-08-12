@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+
+  <records prefix="plone.bundles/collective-travelstream"
+           interface="Products.CMFPlone.interfaces.IBundleRegistry"
+           remove="true"
+           />
+
+</registry>

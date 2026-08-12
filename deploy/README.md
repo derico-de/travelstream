@@ -29,7 +29,7 @@ URLs (same origin — no CORS setup anywhere):
 
 - `/` — the PWA
 - `/++api++/...` — plone.restapi, proxied to the backend
-- `/cms/...` — Plone Classic UI (curation fallback + public blog theme)
+- `/cms/...` — Plone Classic UI (curation fallback + public blog, themed per site)
 
 ## Backups
 

@@ -38,7 +38,22 @@ const IMAGE_SCALES = [
   'huge'
 ];
 const DEFAULT_IMAGE_SCALE = 'large';
+// Plone picture variant per requested scale — must stay in lockstep with
+// PICTURE_VARIANT_BY_SCALE in the Python renderer. The article view expands
+// data-picturevariant into a <picture>/srcset tag server-side.
+const PICTURE_VARIANT_BY_SCALE = {
+  thumb: 'small',
+  mini: 'small',
+  preview: 'small',
+  teaser: 'medium',
+  large: 'large',
+  larger: 'large',
+  great: 'large',
+  huge: 'large'
+};
 const POSTER_SCALE = 'large';
+const GALLERY_TILE_SCALE = 'teaser';
+const GALLERY_LINK_SCALE = 'great';
 
 /** resolveuid image figure with Plone scale URL. */
 export const TravelImage = Node.create({
@@ -70,7 +85,8 @@ export const TravelImage = Node.create({
       {
         src: `resolveuid/${uid}/@@images/image/${scale}`,
         alt: alt || '',
-        loading: 'lazy'
+        loading: 'lazy',
+        'data-picturevariant': PICTURE_VARIANT_BY_SCALE[scale]
       }
     ];
     const children = caption
@@ -105,12 +121,83 @@ export const TravelVideo = Node.create({
       {
         controls: 'controls',
         preload: 'metadata',
-        src: `resolveuid/${uid}/@@download/file`,
+        // @@display-media, not @@download: attachment disposition
+        // suppresses inline playback UI in Firefox.
+        src: `resolveuid/${uid}/@@display-media/file`,
         poster: `resolveuid/${uid}/@@images/image/${POSTER_SCALE}`
       }
     ];
     const children = caption ? [video, ['figcaption', {}, caption]] : [video];
     return ['figure', { class: 'travel-video' }, ...children];
+  }
+});
+
+/**
+ * Multi-item media gallery: an ordered set of trip photos/videos rendered
+ * as one grid figure. Items carry only `{uid, kind, alt}` — URLs are
+ * resolveuid-based so gallery entries survive renames and moves exactly
+ * like single embeds. Anything without a uid is skipped; any kind other
+ * than 'video' renders as an image.
+ *
+ * Published markup follows the plone.gallery contract: flexbin classes for
+ * the tile grid, `a.spotlight` anchors (grouped per `.spotlight-group`)
+ * for zoom. Videos stay plain links, played inline by the browser via
+ * @@display-media — the bundled Spotlight has no video support.
+ */
+export const TravelGallery = Node.create({
+  name: 'travelGallery',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      items: { default: [] }
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'figure[data-travel-gallery]' }];
+  },
+
+  renderHTML({ node }) {
+    const items = Array.isArray(node.attrs.items) ? node.attrs.items : [];
+    const children = [];
+    for (const item of items) {
+      const uid = item && typeof item === 'object' ? item.uid : null;
+      if (!uid) continue;
+      const img = [
+        'img',
+        {
+          src: `resolveuid/${uid}/@@images/image/${GALLERY_TILE_SCALE}`,
+          alt: item.alt || '',
+          loading: 'lazy'
+        }
+      ];
+      if (item.kind === 'video') {
+        children.push([
+          'a',
+          {
+            class: 'travel-gallery-item-video',
+            href: `resolveuid/${uid}/@@display-media/file`
+          },
+          img,
+          ['span', { class: 'travel-gallery-play', 'aria-hidden': 'true' }, '▶']
+        ]);
+      } else {
+        const anchorAttrs = {
+          class: 'spotlight',
+          href: `resolveuid/${uid}/@@images/image/${GALLERY_LINK_SCALE}`,
+          ...(item.alt ? { 'data-title': item.alt } : {})
+        };
+        children.push(['a', anchorAttrs, img]);
+      }
+    }
+    return [
+      'figure',
+      { class: 'travel-gallery flexbin flexbin-margin spotlight-group' },
+      ...children
+    ];
   }
 });
 
@@ -145,5 +232,6 @@ export const travelExtensions = [
   HardBreak,
   HorizontalRule,
   TravelImage,
-  TravelVideo
+  TravelVideo,
+  TravelGallery
 ];

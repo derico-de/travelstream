@@ -44,6 +44,14 @@ services:
   web:
     image: docker.io/library/nginx:1.27-alpine
     restart: unless-stopped
+    # Write the runtime DNS resolver nginx needs for per-request backend
+    # re-resolution (see nginx.conf); the address is runtime-specific
+    # (Docker 127.0.0.11, podman: network gateway), so take the first
+    # nameserver from the container's resolv.conf.
+    command: >
+      /bin/sh -c "echo \"resolver $$(awk '/^nameserver/{print $$2; exit}' /etc/resolv.conf) valid=10s ipv6=off;\"
+      > /etc/nginx/conf.d/00-resolver.conf
+      && exec nginx -g 'daemon off;'"
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:

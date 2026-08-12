@@ -2,11 +2,15 @@
 
 Renders the article's canonical ProseMirror JSON to HTML server-side at
 view time — the published page always shows exactly the canonical
-document. Output is cached per modification time.
+document. Images carry a ``data-picturevariant`` attribute which Plone's
+PictureVariantsFilter expands into a ``<picture>`` tag with the
+registry-defined srcset (``plone.picture_variants``). Output is cached
+per modification time.
 """
 
 from collective.travelstream.renderer import render_document
 from plone.memoize import ram
+from plone.outputfilters.filters.picture_variants import PictureVariantsFilter
 from Products.Five.browser import BrowserView
 
 
@@ -19,4 +23,7 @@ class TravelArticleView(BrowserView):
 
     @ram.cache(_body_cachekey)
     def body_html(self):
-        return render_document(getattr(self.context, "prosemirror_doc", None))
+        body = render_document(getattr(self.context, "prosemirror_doc", None))
+        if 'data-picturevariant="' not in body:
+            return body
+        return PictureVariantsFilter(self.context, self.request)(body)

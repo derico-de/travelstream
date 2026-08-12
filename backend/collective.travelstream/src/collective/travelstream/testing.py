@@ -2,6 +2,7 @@
 import os
 
 import plone.app.theming
+import plone.gallery
 import plone.restapi
 from plone.app.testing import FunctionalTesting
 from plone.app.testing import IntegrationTesting
@@ -21,6 +22,7 @@ class CollectiveTravelstreamLayer(PloneSandboxLayer):
         # Compile .po -> .mo so add-on translations load during tests.
         os.environ.setdefault("zope_i18n_compile_mo_files", "true")
         self.loadZCML(package=plone.app.theming)
+        self.loadZCML(package=plone.gallery)
         self.loadZCML(package=plone.restapi)
         self.loadZCML(package=collective.travelstream)
 

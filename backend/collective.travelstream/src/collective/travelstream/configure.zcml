@@ -58,9 +58,9 @@
   <include package=".controlpanels" />
 
   <plone:static
-      directory="theme"
-      name="travelstream"
-      type="theme"
+      directory="static"
+      name="collective.travelstream"
+      type="plone"
       />
 
 

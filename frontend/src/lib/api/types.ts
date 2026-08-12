@@ -87,6 +87,14 @@ export interface Trip {
   image?: ImageFieldScales | null;
 }
 
+/** Base64 image upload payload for plone.namedfile fields. */
+export interface ImagePayload {
+  data: string;
+  encoding: 'base64';
+  filename: string;
+  'content-type': string;
+}
+
 /** Fields the PWA sends when creating a Trip. */
 export interface NewTrip {
   title: string;
@@ -94,12 +102,7 @@ export interface NewTrip {
   start_date?: string;
   end_date?: string;
   /** Optional cover image (plone.leadimage), base64-encoded. */
-  image?: {
-    data: string;
-    encoding: 'base64';
-    filename: string;
-    'content-type': string;
-  };
+  image?: ImagePayload;
 }
 
 export interface ContentSummary {
@@ -128,6 +131,19 @@ export interface PublishResponse {
 
 export interface TravelstreamSettings {
   article_type: string;
+  /** May the current user create new keywords (Plone registry rule)? */
+  can_add_keywords: boolean;
+}
+
+export interface VocabularyTerm {
+  token: string;
+  title: string;
+}
+
+export interface VocabularyResponse {
+  '@id': string;
+  items: VocabularyTerm[];
+  items_total: number;
 }
 
 export interface LoginResponse {

@@ -475,6 +475,7 @@ dependencies = [
     { name = "plone-app-caching" },
     { name = "plone-app-upgrade" },
     { name = "plone-classicui" },
+    { name = "plone-gallery" },
     { name = "plone-restapi" },
     { name = "setuptools" },
 ]
@@ -503,6 +504,7 @@ requires-dist = [
     { name = "plone-app-testing", marker = "extra == 'test'" },
     { name = "plone-app-upgrade" },
     { name = "plone-classicui" },
+    { name = "plone-gallery" },
     { name = "plone-restapi" },
     { name = "plone-testing", marker = "extra == 'test'" },
     { name = "pytest", marker = "extra == 'test'" },
@@ -2878,6 +2880,19 @@ wheels = [
 z3cform = [
     { name = "z3c-form" },
 ]
+
+[[package]]
+name = "plone-gallery"
+version = "1.1.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "plone-api" },
+    { name = "plone-app-dexterity" },
+    { name = "plone-restapi" },
+    { name = "setuptools" },
+    { name = "z3c-jbot" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/3c/ccac31bdfd1574305fd8946eabf3f05cceb33f7fe9e7defafec75bf077b2/plone.gallery-1.1.6.tar.gz", hash = "sha256:f282a991fd8dc44e374e8b63d6aa9ae48fd467f63c996b307ba426a8f4af2d57", size = 4469292, upload-time = "2023-04-04T09:18:58.353Z" }
 
 [[package]]
 name = "plone-i18n"
@@ -5312,6 +5327,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/56/50/94772dad8332621994f2675ded47c4e0d90348c8057b4bd69f416df680d0/z3c_formwidget_query-3.0.tar.gz", hash = "sha256:4118820b44989f3c67297f59b49ecdda4cd9c44b2c541c4cccb16f161dad8693", size = 15193, upload-time = "2025-04-14T06:34:39.469Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/7d/c134a1d50a4c72f91c93ce863c512a4d5d651f72750235b0722a8e39fa5f/z3c_formwidget_query-3.0-py3-none-any.whl", hash = "sha256:8af0e79234e230d5f569375860bf4ef2a81f40311d1524199da35aba6ccebc2e", size = 15123, upload-time = "2025-04-14T06:34:37.768Z" },
+]
+
+[[package]]
+name = "z3c-jbot"
+version = "3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "setuptools" },
+    { name = "zope-component" },
+    { name = "zope-configuration" },
+    { name = "zope-pagetemplate" },
+    { name = "zope-publisher" },
+    { name = "zope-security" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/61/aa/10b8c7750e6a77cdaff8d7e0eca8554d2802e61d7223df920f46488f6b6a/z3c_jbot-3.1.tar.gz", hash = "sha256:80f4f3ff01946f08ee986cae05b8c1b2b491983dfc1da0a1fad6b852fa7968ab", size = 20758, upload-time = "2025-07-29T08:16:24.77Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/0b/fb3fd7287af2a6a3d5c2bc827748cf04d96680208cc5f9088075a394fbd7/z3c_jbot-3.1-py3-none-any.whl", hash = "sha256:ddc90de6e6d65652101f45775ccb05774645d847489c8578bc0da8596bb5c969", size = 20334, upload-time = "2025-07-29T08:16:23.686Z" },
 ]
 
 [[package]]

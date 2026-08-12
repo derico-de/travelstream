@@ -1,6 +1,6 @@
 /** Small formatting/URL helpers shared by the UI. */
 
-import type { TimelineItem, Trip } from './api/types';
+import type { ImageFieldScales, ImagePayload, TimelineItem, Trip } from './api/types';
 
 /** Path of a content object relative to the site root, from its @id. */
 export function contentPath(atId: string): string {
@@ -24,13 +24,39 @@ export function browseUrl(atId: string): string {
   return `/++api++/${contentPath(atId)}`;
 }
 
-export function tripCoverUrl(trip: Trip): string | null {
-  const image = trip.image;
+/** Cover (lead image) URL of any content with a plone.leadimage field. */
+export function coverUrl(content: {
+  '@id': string;
+  image?: ImageFieldScales | null;
+}): string | null {
+  const image = content.image;
   if (!image) return null;
   const scale = image.scales?.preview ?? image.scales?.teaser;
   const download = scale?.download ?? image.download;
   if (!download) return null;
-  return download.startsWith('http') ? browseUrl(download) : `${browseUrl(trip['@id'])}/${download}`;
+  return download.startsWith('http')
+    ? browseUrl(download)
+    : `${browseUrl(content['@id'])}/${download}`;
+}
+
+export function tripCoverUrl(trip: Trip): string | null {
+  return coverUrl(trip);
+}
+
+/** Read a picked file into the base64 payload plone.restapi expects. */
+export async function readImagePayload(file: File): Promise<ImagePayload> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  return {
+    data: dataUrl.split(',', 2)[1] ?? '',
+    encoding: 'base64',
+    filename: file.name,
+    'content-type': file.type || 'application/octet-stream'
+  };
 }
 
 function itemScaleUrl(item: TimelineItem, preference: string[]): string | null {
@@ -48,6 +74,11 @@ function itemScaleUrl(item: TimelineItem, preference: string[]): string | null {
 
 export function itemThumbnail(item: TimelineItem): string | null {
   return itemScaleUrl(item, ['teaser', 'preview', 'thumb']);
+}
+
+/** Wide card cover for list views (articles tab). */
+export function itemCover(item: TimelineItem): string | null {
+  return itemScaleUrl(item, ['preview', 'teaser', 'large']);
 }
 
 export function itemFullImage(item: TimelineItem): string | null {

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { api } from '$lib/session';
-  import { contentPath, formatCaptureTime, itemThumbnail } from '$lib/format';
+  import { contentPath, formatCaptureTime, itemCover, itemThumbnail } from '$lib/format';
+  import { primeMediaCache } from '$lib/media';
   import type { EntryKind, TimelineItem } from '$lib/api/types';
 
-  let { path }: { path: string } = $props();
+  let { path, fixedKind }: { path: string; fixedKind?: EntryKind } = $props();
 
   let items = $state<TimelineItem[]>([]);
   let nextUrl = $state<string | null>(null);
@@ -20,7 +21,7 @@
     error = '';
     try {
       const response = await api.timeline(`/${path}`, {
-        kind: kind || undefined,
+        kind: fixedKind ?? (kind || undefined),
         captured_after: after ? `${after}T00:00:00` : undefined,
         captured_before: before ? `${before}T23:59:59` : undefined,
         b_size: 25
@@ -28,8 +29,9 @@
       items = response.items;
       total = response.items_total;
       nextUrl = response.batching?.next ?? null;
+      primeMediaCache(response.items);
     } catch {
-      error = 'Could not load the timeline.';
+      error = 'Could not load the stream.';
     } finally {
       loading = false;
     }
@@ -40,8 +42,12 @@
     loading = true;
     try {
       const response = await api.timelinePage(nextUrl);
-      items = [...items, ...response.items];
+      // Never append an item twice — a duplicate key crashes the keyed
+      // {#each} and freezes the list mid-"Loading more".
+      const known = new Set(items.map((i) => i['@id']));
+      items = [...items, ...response.items.filter((i) => !known.has(i['@id']))];
       nextUrl = response.batching?.next ?? null;
+      primeMediaCache(response.items);
     } finally {
       loading = false;
     }
@@ -50,6 +56,7 @@
   $effect(() => {
     // Reload when path or filters change.
     void path;
+    void fixedKind;
     void kind;
     void after;
     void before;
@@ -74,13 +81,15 @@
 </script>
 
 <div class="filters">
-  <select bind:value={kind}>
-    <option value="">All kinds</option>
-    <option value="photo">Photos</option>
-    <option value="video">Videos</option>
-    <option value="note">Notes</option>
-    <option value="article">Articles</option>
-  </select>
+  {#if !fixedKind}
+    <select bind:value={kind}>
+      <option value="">All kinds</option>
+      <option value="photo">Photos</option>
+      <option value="video">Videos</option>
+      <option value="note">Notes</option>
+      <option value="article">Articles</option>
+    </select>
+  {/if}
   <input type="date" bind:value={after} title="From" />
   <input type="date" bind:value={before} title="Until" />
 </div>
@@ -88,7 +97,33 @@
 {#if error}
   <p class="error">{error}</p>
 {:else}
-  <p class="count">{total} entries</p>
+  <p class="count">{total} {fixedKind ? `${fixedKind}s` : 'entries'}</p>
+  {#if fixedKind === 'article'}
+    <!-- Trip-style cards: full-width cover, title, teaser, date. -->
+    <ul class="articles">
+      {#each items as item (item['@id'])}
+        <li>
+          <a href={`/a/${contentPath(item['@id'])}`}>
+            {#if itemCover(item)}
+              <img src={itemCover(item)} alt="" loading="lazy" />
+            {:else}
+              <div class="placeholder"></div>
+            {/if}
+            <div class="meta">
+              <strong>{item.title}</strong>
+              {#if item.description}
+                <p class="teaser">{item.description}</p>
+              {/if}
+              <span>
+                {formatCaptureTime(item.captured_at)}
+                {#if item.review_state === 'published'}· published{/if}
+              </span>
+            </div>
+          </a>
+        </li>
+      {/each}
+    </ul>
+  {:else}
   <ul class="timeline">
     {#each items as item (item['@id'])}
       <li>
@@ -111,6 +146,7 @@
       </li>
     {/each}
   </ul>
+  {/if}
   {#if nextUrl}
     <div class="sentinel" bind:this={sentinel}>
       {loading ? 'Loading more...' : ''}
@@ -132,6 +168,40 @@
     border: 1px solid #b8c0cc;
   }
   .count { color: #5a6676; font-size: 0.85rem; }
+  /* Article cards mirror the trips list. */
+  .articles {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .articles a {
+    display: block;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 3px rgba(20, 30, 40, 0.12);
+  }
+  .articles img, .placeholder {
+    width: 100%;
+    height: 9rem;
+    object-fit: cover;
+    display: block;
+    background: linear-gradient(120deg, var(--primary-soft), var(--primary));
+  }
+  .articles .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.7rem 0.9rem;
+  }
+  .teaser {
+    margin: 0;
+    color: #5a6676;
+    font-size: 0.9rem;
+  }
   .timeline {
     list-style: none;
     padding: 0;

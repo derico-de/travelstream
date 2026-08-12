@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-  <version>1001</version>
+  <version>1003</version>
   <dependencies>
     <dependency>profile-plone.app.registry:default</dependency>
     <!-- PWA login and the media worker need the restapi PAS plugin
          (jwt_auth); the classic distribution does not install it. -->
     <dependency>profile-plone.restapi:default</dependency>
+    <!-- Gallery grid (flexbin) and zoom (Spotlight) for article galleries. -->
+    <dependency>profile-plone.gallery:default</dependency>
   </dependencies>
 </metadata>

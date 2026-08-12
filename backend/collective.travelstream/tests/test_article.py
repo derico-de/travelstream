@@ -55,7 +55,8 @@ class TestGoldenFixtures:
     """The Python renderer is pinned by the shared golden fixtures."""
 
     @pytest.mark.parametrize(
-        "name", ["basic", "lists-quote", "media", "unknown-node"]
+        "name",
+        ["basic", "lists-quote", "media", "gallery", "gallery-empty", "unknown-node"],
     )
     def test_fixture(self, name):
         doc = json.loads((FIXTURES_DIR / f"{name}.json").read_text())
@@ -83,12 +84,20 @@ class TestArticleRendering:
         html_session = request_factory(role="Manager", api=False)
         r = html_session.get(article["@id"], headers={"Accept": "text/html"})
         assert r.status_code == 200
+        # PictureVariantsFilter expands data-picturevariant="large" into a
+        # <picture> tag whose srcset/base come from plone.picture_variants
+        # (variant "large" renders from the "larger" scale).
+        assert "<picture>" in r.text
         assert (
-            'src="resolveuid/0123456789abcdef0123456789abcdef/@@images/image/large"'
+            'src="resolveuid/0123456789abcdef0123456789abcdef/@@images/image/larger"'
+            in r.text
+        )
+        assert (
+            "resolveuid/0123456789abcdef0123456789abcdef/@@images/image/huge 1600w"
             in r.text
         )
         assert "<video controls" in r.text
-        assert "@@download/file" in r.text
+        assert "@@display-media/file" in r.text
 
     def test_unknown_node_renders_fallback_not_error(
         self, trip, manager_request, request_factory
@@ -112,6 +121,19 @@ class TestArticleRendering:
         # Document's own RichText field stays empty — the JSON is the only
         # representation.
         assert fetched.get("text") in (None, ""), fetched.get("text")
+
+
+class TestDisplayMedia:
+    def test_video_served_inline(self, trip, manager_request):
+        # @@display-media must send Content-Disposition: inline — Firefox
+        # shows no playback UI for attachment-flagged <video> sources.
+        from .test_worker_seam import video_payload
+
+        created = manager_request.post(trip["@id"], json=video_payload("clip")).json()
+        r = manager_request.get(f"{created['@id']}/@@display-media/file")
+        assert r.status_code == 200
+        assert r.headers["Content-Disposition"].startswith("inline")
+        assert r.content == b"fake video bytes"
 
 
 class TestArticleSearch:

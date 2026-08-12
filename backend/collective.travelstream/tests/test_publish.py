@@ -225,3 +225,85 @@ class TestEmbeddedRelations:
         assert r.status_code in (200, 204)
         fetched = manager_request.get(publish_setup["article"]["@id"]).json()
         assert fetched["embedded_entries"][0]["UID"] == embedded["UID"]
+
+
+class TestEmbeddedMediaFollowsArticle:
+    """A published article's embedded media is published (subscribers)."""
+
+    def test_plain_workflow_publish_also_publishes_media(
+        self, publish_setup, manager_request
+    ):
+        # Publish through the stock @workflow endpoint, NOT @travel-publish:
+        # the transition subscriber must carry the embedded media along.
+        article = publish_setup["article"]
+        r = manager_request.post(f"{article['@id']}/@workflow/publish", json={})
+        assert r.status_code == 200, r.text
+        embedded = manager_request.get(publish_setup["embedded"]["@id"]).json()
+        assert embedded["review_state"] == "published"
+        # The non-embedded image stays private.
+        private = manager_request.get(publish_setup["private"]["@id"]).json()
+        assert private["review_state"] == "private"
+
+    def test_media_added_after_publish_is_published_on_save(
+        self, publish_setup, manager_request
+    ):
+        article = publish_setup["article"]
+        manager_request.post(f"{article['@id']}/@travel-publish", json={})
+        late = manager_request.post("/pub", json=image_payload("late")).json()
+        assert late["review_state"] == "private"
+
+        doc = {
+            "type": "doc",
+            "content": [
+                {"type": "travelImage", "attrs": {"uid": late["UID"], "alt": ""}}
+            ],
+        }
+        r = manager_request.patch(
+            article["@id"],
+            json={"prosemirror_doc": doc, "embedded_entries": [late["UID"]]},
+        )
+        assert r.status_code in (200, 204), r.text
+        late = manager_request.get(late["@id"]).json()
+        assert late["review_state"] == "published"
+
+    def test_doc_uids_publish_even_with_stale_relations(
+        self, publish_setup, manager_request
+    ):
+        # The canonical document is the source of truth: media referenced
+        # only by the JSON (relations never saved) is still published —
+        # gallery items included.
+        article = publish_setup["article"]
+        solo = manager_request.post("/pub", json=image_payload("solo")).json()
+        tile = manager_request.post("/pub", json=image_payload("tile")).json()
+        doc = {
+            "type": "doc",
+            "content": [
+                {"type": "travelImage", "attrs": {"uid": solo["UID"], "alt": ""}},
+                {
+                    "type": "travelGallery",
+                    "attrs": {"items": [{"uid": tile["UID"], "kind": "image"}]},
+                },
+            ],
+        }
+        r = manager_request.patch(article["@id"], json={"prosemirror_doc": doc})
+        assert r.status_code in (200, 204), r.text
+
+        r = manager_request.post(f"{article['@id']}/@travel-publish", json={})
+        assert r.status_code == 200, r.text
+        assert r.json()["all_done"] is True
+        for created in (solo, tile):
+            fetched = manager_request.get(created["@id"]).json()
+            assert fetched["review_state"] == "published", created["@id"]
+
+    def test_plain_workflow_retract_keeps_media_public(
+        self, publish_setup, manager_request
+    ):
+        # The subscriber only mirrors the publish direction: media may be
+        # shared with another still-published article. Explicit retract of
+        # media stays with @travel-publish.
+        article = publish_setup["article"]
+        manager_request.post(f"{article['@id']}/@travel-publish", json={})
+        r = manager_request.post(f"{article['@id']}/@workflow/retract", json={})
+        assert r.status_code == 200, r.text
+        embedded = manager_request.get(publish_setup["embedded"]["@id"]).json()
+        assert embedded["review_state"] == "published"
