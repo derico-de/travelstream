@@ -28,6 +28,20 @@ while true; do
 
     mkdir -p "$BACKUPS/filestorage" "$BACKUPS/blobstorage"
 
+    # Never report success with nothing to back up. Under compose the
+    # backup service now waits for a healthy backend, so this mainly
+    # guards the native/systemd path, where the instance may simply not
+    # have been created yet. Skipping loudly beats both crash-looping
+    # (set -e on repozo) and writing a backup of a file that is not there.
+    if [ ! -f "$FILESTORAGE/Data.fs" ]; then
+        echo "[backup] $stamp no Data.fs at $FILESTORAGE - skipping" >&2
+        if [ "$ONESHOT" = "1" ]; then
+            exit 1
+        fi
+        sleep "$INTERVAL"
+        continue
+    fi
+
     # Incremental repozo backup (falls back to full when none exists);
     # --gzip keeps years of dailies small.
     "$REPOZO" --backup --gzip \

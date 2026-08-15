@@ -79,6 +79,20 @@ services:
     image: docker.io/plone/plone-backend:6.1.5
     restart: unless-stopped
     entrypoint: ["/bin/sh", "/backup.sh"]
+    # Wait for Plone to be serving, not merely started. On a fresh volume
+    # the backend spends its first ~45s creating the site; a backup that
+    # starts alongside it captures a near-empty Data.fs and then sleeps
+    # BACKUP_INTERVAL_SECONDS, leaving a new deployment with nothing but a
+    # worthless backup for its first day.
+    depends_on:
+      backend:
+        condition: service_healthy
+    # This image ships a HEALTHCHECK that wgets 127.0.0.1:8080/ok. The
+    # entrypoint above replaces the server with a backup loop, so nothing
+    # ever listens and the container would report "unhealthy" forever —
+    # training everyone to ignore a red status.
+    healthcheck:
+      disable: true
     environment:
       BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
       KEEP_DAYS: "${BACKUP_KEEP_DAYS:-30}"
