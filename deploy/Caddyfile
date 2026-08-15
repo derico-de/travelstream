@@ -1,0 +1,81 @@
+# Travelstream behind Caddy: the PWA and Plone on one server, two hostnames.
+#
+#   app.travel.planetcrazy.de   the PWA, plus a same-origin /++api++ proxy
+#                               into Plone
+#   travel.planetcrazy.de       Plone Classic UI at the root (public site
+#                               and curation fallback)
+#
+# The REST API deliberately lives on the *app* origin, not on the public
+# one. The PWA builds every backend URL as a host-relative /++api++/...
+# path (frontend/src/lib/api/client.ts, frontend/src/lib/format.ts) and
+# rewrites the absolute URLs Plone hands back — including TUS upload
+# Locations — onto its own origin. Moving the API to the public hostname
+# would buy nothing and cost a CORS preflight on every upload chunk.
+#
+# Every {$NAME:default} below can be overridden with an environment
+# variable; the defaults are the production values. See CADDY.md.
+#
+# Site blocks only, no global options block: that is what lets this file be
+# `import`ed into a Caddyfile which already serves other sites. The ACME
+# contact address is therefore set per site with `tls`; drop those lines if
+# your own global block already sets `email`.
+
+# Shared upstream: one Zope process, plain HTTP, no TLS behind us. Whether
+# it is a container or a systemd-managed instance makes no difference here
+# — only the address does. Prefixed so it cannot collide with a snippet in
+# the importing Caddyfile.
+(travelstream_plone) {
+	reverse_proxy {$PLONE_UPSTREAM:127.0.0.1:8080} {
+		transport http {
+			dial_timeout 10s
+			# Plone can sit on a request for a while when a large TUS
+			# upload is finalised into a blob; the 3m default is tight.
+			response_header_timeout 600s
+		}
+	}
+}
+
+# --------------------------------------------------------------- the PWA --
+{$APP_HOST:app.travel.planetcrazy.de} {
+	tls {$ACME_EMAIL:webmaster@planetcrazy.de}
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	# plone.restapi under the same origin as the app. handle_path strips
+	# /++api++ before the inner handlers run, so {uri} here is the path
+	# inside the Plone site (plus its query string).
+	handle_path /++api++/* {
+		rewrite * /VirtualHostBase/https/{host}:443/Plone/++api++/VirtualHostRoot{uri}
+		import travelstream_plone
+	}
+
+	# The SvelteKit adapter-static build (SPA fallback to index.html).
+	handle {
+		root * {$PWA_ROOT:/srv/travelstream/frontend/build}
+
+		# Fingerprinted assets never change under a given name.
+		@immutable path /_app/immutable/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# Everything else — index.html, sw.js, registerSW.js, the
+		# webmanifest, _app/version.json — is what tells a client which
+		# build to run. Caching any of it strands users on an old app.
+		@mutable not path /_app/immutable/*
+		header @mutable Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# ------------------------------------------ Plone Classic UI (public site) --
+{$PUBLIC_HOST:travel.planetcrazy.de} {
+	tls {$ACME_EMAIL:webmaster@planetcrazy.de}
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	# Site root == host root, so no _vh_ segment (unlike the /cms mount in
+	# the nginx config this replaces).
+	rewrite * /VirtualHostBase/https/{host}:443/Plone/VirtualHostRoot{uri}
+	import travelstream_plone
+}

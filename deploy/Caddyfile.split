@@ -1,0 +1,116 @@
+# Travelstream, app and backend fully separated.
+#
+#   app.travel.planetcrazy.de   nothing but the PWA statics — no proxy
+#   travel.planetcrazy.de       Plone: Classic UI at the root, plus the
+#                               REST API at /++api++ with CORS for the app
+#
+# Use this instead of ./Caddyfile when the PWA must not proxy the backend:
+# the two run on different machines, the backend is shared with other
+# frontends, or you want to host one build and point it at a chosen Plone.
+# The PWA has to be built for it:
+#
+#     VITE_API_BASE=https://travel.planetcrazy.de/++api++ pnpm build
+#
+# The two site blocks are independent — if the hosts are on different
+# servers, put each block in that server's Caddyfile and drop the other.
+#
+# Trade-off vs ./Caddyfile: this costs a CORS preflight on every request
+# carrying Authorization, including each 5 MB TUS chunk. Prefer the
+# same-origin layout unless you actually need the separation. See CADDY.md.
+#
+# Site blocks only, no global options block, so this file can be `import`ed
+# into a Caddyfile that already serves other sites. The ACME contact
+# address is set per site with `tls`; drop those lines if your own global
+# block already sets `email`.
+
+# The exact origin the PWA is served from. Anything else is refused by the
+# browser: no wildcard, so a stray site cannot drive someone's backend.
+# For several frontends, repeat the @app_origin matcher and header block.
+(travelstream_cors) {
+	@app_origin header Origin {$APP_ORIGIN:https://app.travel.planetcrazy.de}
+	header @app_origin {
+		Access-Control-Allow-Origin {$APP_ORIGIN:https://app.travel.planetcrazy.de}
+		# The response differs by Origin, so it must not be cached flat.
+		+Vary Origin
+		# tus-js-client reads the upload URL out of Location and the resume
+		# point out of Upload-Offset. Cross-origin, both are invisible
+		# unless exposed — uploads would restart from zero forever.
+		Access-Control-Expose-Headers "Location, Tus-Resumable, Upload-Offset, Upload-Length, Upload-Expires, Upload-Metadata"
+	}
+
+	@preflight {
+		method OPTIONS
+		header Origin {$APP_ORIGIN:https://app.travel.planetcrazy.de}
+	}
+	handle @preflight {
+		header {
+			Access-Control-Allow-Methods "GET, POST, PATCH, DELETE, HEAD, OPTIONS"
+			Access-Control-Allow-Headers "Authorization, Content-Type, Accept, Tus-Resumable, Upload-Length, Upload-Metadata, Upload-Offset, Upload-Concat, Upload-Defer-Length, X-HTTP-Method-Override"
+			Access-Control-Max-Age "3600"
+		}
+		respond 204
+	}
+	# Note: no Access-Control-Allow-Credentials. Auth is a JWT in the
+	# Authorization header, so no cookies need to cross origins — which is
+	# also what keeps the allowlist above meaningful.
+}
+
+# Whether Plone is a container or a systemd-managed instance makes no
+# difference here — only the address does.
+(travelstream_plone) {
+	reverse_proxy {$PLONE_UPSTREAM:127.0.0.1:8080} {
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 600s
+		}
+	}
+}
+
+# ------------------------------------------------- the PWA (statics only) --
+{$APP_HOST:app.travel.planetcrazy.de} {
+	tls {$ACME_EMAIL:webmaster@planetcrazy.de}
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	# Nothing is proxied here, so a build that was not pointed at a backend
+	# would fall through to the SPA fallback and answer every API call with
+	# the HTML shell and a 200 — which surfaces as baffling JSON parse
+	# errors. Fail loudly instead.
+	handle /++api++/* {
+		respond "No backend on this origin: rebuild the PWA with VITE_API_BASE set." 404
+	}
+
+	handle {
+		root * {$PWA_ROOT:/srv/travelstream/frontend/build}
+
+		@immutable path /_app/immutable/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@mutable not path /_app/immutable/*
+		header @mutable Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# ------------------------------------------- Plone: Classic UI + REST API --
+{$PUBLIC_HOST:travel.planetcrazy.de} {
+	tls {$ACME_EMAIL:webmaster@planetcrazy.de}
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	import travelstream_cors
+
+	# The API the PWA talks to, on the backend's own origin this time.
+	handle_path /++api++/* {
+		rewrite * /VirtualHostBase/https/{host}:443/Plone/++api++/VirtualHostRoot{uri}
+		import travelstream_plone
+	}
+
+	# Classic UI at the root. This has to sit in a handle block: a bare
+	# site-level `rewrite` runs before handle_path and would rewrite the
+	# API requests out from under it.
+	handle {
+		rewrite * /VirtualHostBase/https/{host}:443/Plone/VirtualHostRoot{uri}
+		import travelstream_plone
+	}
+}

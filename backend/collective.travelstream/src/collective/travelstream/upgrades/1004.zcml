@@ -1,0 +1,31 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    i18n_domain="collective.travelstream">
+
+  <genericsetup:registerProfile
+      name="1004"
+      title="collective.travelstream: upgrade to 1004"
+      directory="1004"
+      provides="Products.GenericSetup.interfaces.EXTENSION"
+      />
+
+  <genericsetup:upgradeSteps
+      source="1003"
+      destination="1004"
+      profile="collective.travelstream:default">
+
+    <genericsetup:upgradeStep
+        title="Trip is no longer a navigation root"
+        description="Remove the plone.navigationroot behavior from the Trip FTI so navigation stays open and users can see other trips"
+        handler=".v1004.upgrade"
+        />
+
+    <genericsetup:upgradeDepends
+        title="Apply profile version 1004"
+        import_profile="collective.travelstream.upgrades:1004"
+        />
+
+  </genericsetup:upgradeSteps>
+
+</configure>

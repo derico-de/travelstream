@@ -184,6 +184,9 @@ export class TusTransport implements OutboxTransport {
     }
     await this.api.patch(remoteUrl, {
       title: item.title,
+      // Review-time details; omitted keys leave the server defaults alone.
+      ...(item.description !== undefined && { description: item.description }),
+      ...(item.tags !== undefined && { subjects: item.tags }),
       captured_at: item.capturedAt,
       latitude: item.latitude,
       longitude: item.longitude

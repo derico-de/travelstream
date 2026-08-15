@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
 
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import {
     contentPath,
     coverUrl,
@@ -62,7 +63,9 @@
   let description = $state('');
   let subjects = $state<string[]>([]);
   let keywordSuggestions = $state<string[]>([]);
-  let canAddKeywords = $state(false);
+  // Seeded from the last fetched settings; permissive when nothing is known
+  // yet, so a failed fetch never locks tag creation for an allowed user.
+  let canAddKeywords = $state(api.settingsCached()?.can_add_keywords ?? true);
   // Cover changes are staged locally and written on Save, like the rest.
   let coverPreview = $state<string | null>(null);
   let coverFile = $state<File | null>(null);
@@ -306,7 +309,7 @@
 
     <div class="cover">
       {#if coverSrc}
-        <img src={coverSrc} alt="Article cover" />
+        <img src={coverSrc} alt="Article cover" crossorigin={MEDIA_CROSSORIGIN} />
       {/if}
       <div class="cover-actions">
         <label class="cover-pick">

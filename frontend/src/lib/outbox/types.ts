@@ -2,7 +2,7 @@
 
 export type CaptureKind = 'photo' | 'video' | 'note';
 
-export type OutboxState = 'captured' | 'queued' | 'uploading' | 'done' | 'failed';
+export type OutboxState = 'staged' | 'captured' | 'queued' | 'uploading' | 'done' | 'failed';
 
 /** kind -> Plone @type mapping, applied at drain time. */
 export const TYPE_FOR_KIND: Record<CaptureKind, string> = {
@@ -22,6 +22,10 @@ export interface OutboxItem {
    */
   tripPath: string;
   title: string;
+  /** Optional caption delivered as the Plone Description field. */
+  description?: string;
+  /** Plone keywords (subjects) applied at drain time. */
+  tags?: string[];
   /** Note body (kind === 'note' only). */
   text?: string;
   /** Media payload (photo/video); persisted in IndexedDB alongside. */
@@ -50,6 +54,14 @@ export interface CaptureInput {
   kind: CaptureKind;
   tripPath: string;
   title: string;
+  description?: string;
+  tags?: string[];
+  /**
+   * Staged items are persisted immediately (a picked file must never be
+   * lost) but held from drain while their details are still being reviewed;
+   * releaseStaged() queues them.
+   */
+  staged?: boolean;
   text?: string;
   blob?: Blob;
   filename?: string;

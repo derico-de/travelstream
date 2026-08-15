@@ -1,5 +1,6 @@
 /** Small formatting/URL helpers shared by the UI. */
 
+import { API_BASE } from './api/base';
 import type { ImageFieldScales, ImagePayload, TimelineItem, Trip } from './api/types';
 
 /** Path of a content object relative to the site root, from its @id. */
@@ -18,10 +19,14 @@ export function contentPath(atId: string): string {
   }
 }
 
-/** Proxy-relative browse URL for a backend content URL. */
+/**
+ * Browse URL for a backend content URL, rebased onto the API we are
+ * configured to talk to (same-origin proxy by default, another origin when
+ * the backend is deployed separately).
+ */
 export function browseUrl(atId: string): string {
   if (!/^https?:\/\//.test(atId)) return atId;
-  return `/++api++/${contentPath(atId)}`;
+  return `${API_BASE}/${contentPath(atId)}`;
 }
 
 /** Cover (lead image) URL of any content with a plone.leadimage field. */

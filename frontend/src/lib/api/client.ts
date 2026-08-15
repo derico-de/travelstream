@@ -6,6 +6,7 @@
  * store so it stays testable without a browser.
  */
 
+import { API_BASE, apiBasePath } from './base';
 import type {
   GeojsonResponse,
   LoginResponse,
@@ -23,6 +24,8 @@ export interface TokenStorage {
   set(token: string | null): void;
 }
 
+const SETTINGS_CACHE_KEY = 'travelstream.settings';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -34,7 +37,11 @@ export class ApiError extends Error {
 }
 
 export interface ApiClientOptions {
-  /** Base URL of the REST API, e.g. `/++api++` (same-origin proxy). */
+  /**
+   * Base URL of the REST API. Either a path on the app's own origin
+   * (`/++api++`, the default) or an absolute URL when the backend is
+   * deployed separately (`https://travel.example/++api++`).
+   */
   baseUrl?: string;
   fetchFn?: typeof fetch;
   tokenStorage?: TokenStorage;
@@ -81,12 +88,15 @@ function isTokenExpiringSoon(token: string, withinSeconds = 60 * 60 * 24): boole
 
 export class ApiClient {
   baseUrl: string;
+  /** Path part of `baseUrl`, the bit a backend URL may already carry. */
+  private basePath: string;
   private fetchFn: typeof fetch;
   tokens: TokenStorage;
   private onAuthExpired?: () => void;
 
   constructor(options: ApiClientOptions = {}) {
-    this.baseUrl = (options.baseUrl ?? '/++api++').replace(/\/$/, '');
+    this.baseUrl = (options.baseUrl ?? API_BASE).replace(/\/+$/, '');
+    this.basePath = apiBasePath(this.baseUrl);
     this.fetchFn = options.fetchFn ?? fetch.bind(globalThis);
     this.tokens = options.tokenStorage ?? memoryTokenStorage();
     this.onAuthExpired = options.onAuthExpired;
@@ -100,12 +110,22 @@ export class ApiClient {
   resolve(pathOrUrl: string): string {
     if (/^https?:\/\//.test(pathOrUrl)) {
       // Absolute content URL from the backend: keep path and query (batch
-      // links carry b_start there) so the same-origin proxy handles it.
+      // links carry b_start there) and re-attach our own base, so the
+      // request goes where we point the app rather than wherever the
+      // backend thinks it lives. TUS Locations depend on this.
       const url = new URL(pathOrUrl);
       pathOrUrl = `${url.pathname}${url.search}`;
     }
-    if (pathOrUrl.startsWith(this.baseUrl)) return pathOrUrl;
-    return `${this.baseUrl}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
+    if (!pathOrUrl.startsWith('/')) pathOrUrl = `/${pathOrUrl}`;
+    // Virtual-host rewritten URLs come back already carrying the base
+    // path; appending it again would yield /++api++/++api++/... Compare
+    // against the *path*, not the whole base — with an absolute base
+    // (separately deployed backend) the two never match as strings.
+    if (pathOrUrl === this.basePath) pathOrUrl = '';
+    else if (this.basePath && pathOrUrl.startsWith(`${this.basePath}/`)) {
+      pathOrUrl = pathOrUrl.slice(this.basePath.length);
+    }
+    return `${this.baseUrl}${pathOrUrl}`;
   }
 
   async request<T>(
@@ -255,8 +275,28 @@ export class ApiClient {
     );
   }
 
-  settings(): Promise<TravelstreamSettings> {
-    return this.get<TravelstreamSettings>('/@travelstream-settings');
+  async settings(): Promise<TravelstreamSettings> {
+    const result = await this.get<TravelstreamSettings>('/@travelstream-settings');
+    try {
+      localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(result));
+    } catch {
+      /* cache is best-effort */
+    }
+    return result;
+  }
+
+  /**
+   * Last successfully fetched settings, surviving restarts and offline.
+   * Seed UI state from this so a failed fetch (flaky Wi-Fi, backend down)
+   * degrades to yesterday's truth instead of a wrong hardcoded default.
+   */
+  settingsCached(): TravelstreamSettings | null {
+    try {
+      const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+      return raw ? (JSON.parse(raw) as TravelstreamSettings) : null;
+    } catch {
+      return null;
+    }
   }
 
   /** All existing keywords (tags) on the site. */

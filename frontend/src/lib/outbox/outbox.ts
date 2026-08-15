@@ -59,9 +59,13 @@ export class Outbox {
     const item: OutboxItem = {
       id: nextId(now),
       kind: input.kind,
-      state: input.pendingAttachment ? 'captured' : 'queued',
+      state: input.staged ? 'staged' : input.pendingAttachment ? 'captured' : 'queued',
       tripPath: input.tripPath,
       title: input.title,
+      description: input.description,
+      // Copy: callers may hand in framework-reactive Proxy arrays, which
+      // IndexedDB's structured clone rejects.
+      tags: input.tags ? [...input.tags] : undefined,
       text: input.text,
       blob: input.blob,
       filename: input.filename,
@@ -180,6 +184,42 @@ export class Outbox {
       });
     }
     this.changed();
+  }
+
+  /**
+   * Update review-time details on a staged item. Persisted per edit so a
+   * killed app mid-review loses no typing, only focus.
+   */
+  async amendDetails(
+    id: string,
+    details: { title?: string; description?: string; tags?: string[] }
+  ): Promise<void> {
+    const item = await this.store.get(id);
+    if (!item || item.state !== 'staged') return;
+    await this.store.update(id, {
+      ...details,
+      // Copy: reactive Proxy arrays fail IndexedDB's structured clone.
+      ...(details.tags && { tags: [...details.tags] })
+    });
+  }
+
+  /** Release all staged items into the queue; the caller decides to drain. */
+  async releaseStaged(): Promise<OutboxItem[]> {
+    const staged = (await this.store.list()).filter((i) => i.state === 'staged');
+    for (const item of staged) {
+      await this.store.update(item.id, { state: 'queued' });
+    }
+    if (staged.length > 0) this.changed();
+    return staged;
+  }
+
+  /** Discard every staged item (explicit user choice; blobs are freed). */
+  async discardStaged(): Promise<void> {
+    const staged = (await this.store.list()).filter((i) => i.state === 'staged');
+    for (const item of staged) {
+      await this.store.delete(item.id);
+    }
+    if (staged.length > 0) this.changed();
   }
 
   /** Assign a trip to an item captured without one; it becomes drainable. */

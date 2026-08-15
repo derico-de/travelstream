@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { slide } from 'svelte/transition';
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import { contentPath, formatCaptureTime, itemCover, itemThumbnail } from '$lib/format';
   import { primeMediaCache } from '$lib/media';
   import type { EntryKind, TimelineItem } from '$lib/api/types';
@@ -15,6 +17,20 @@
   let after = $state('');
   let before = $state('');
   let sentinel = $state<HTMLElement | null>(null);
+
+  /** The filter panel is quiet chrome: closed until asked for. */
+  let filtersOpen = $state(false);
+  const filtersActive = $derived(Boolean(kind || after || before));
+  const panelId = `timeline-filters-${Math.random().toString(36).slice(2, 8)}`;
+  const reduceMotion =
+    typeof matchMedia !== 'undefined' &&
+    matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function clearFilters() {
+    kind = '';
+    after = '';
+    before = '';
+  }
 
   async function loadFirstPage() {
     loading = true;
@@ -80,24 +96,62 @@
   };
 </script>
 
-<div class="filters">
-  {#if !fixedKind}
-    <select bind:value={kind}>
-      <option value="">All kinds</option>
-      <option value="photo">Photos</option>
-      <option value="video">Videos</option>
-      <option value="note">Notes</option>
-      <option value="article">Articles</option>
-    </select>
-  {/if}
-  <input type="date" bind:value={after} title="From" />
-  <input type="date" bind:value={before} title="Until" />
-</div>
-
 {#if error}
   <p class="error">{error}</p>
 {:else}
-  <p class="count">{total} {fixedKind ? `${fixedKind}s` : 'entries'}</p>
+  <div class="list-controls">
+    {#if !(fixedKind === 'article' && total === 0 && !loading && !filtersActive)}
+      <p class="count">{total} {fixedKind ? `${fixedKind}s` : 'entries'}</p>
+    {/if}
+    <button
+      type="button"
+      class="filter-toggle"
+      class:active={filtersActive}
+      aria-expanded={filtersOpen}
+      aria-controls={panelId}
+      onclick={() => (filtersOpen = !filtersOpen)}
+    >
+      Filter
+    </button>
+  </div>
+
+  {#if filtersOpen}
+    <div
+      class="filters"
+      id={panelId}
+      transition:slide={{ duration: reduceMotion ? 0 : 150 }}
+    >
+      <div class="filters-head">
+        <strong>Filter {fixedKind === 'article' ? 'articles' : 'entries'}</strong>
+        {#if filtersActive}
+          <button type="button" class="clear" onclick={clearFilters}>Clear</button>
+        {/if}
+      </div>
+      <div class="filter-fields">
+        {#if !fixedKind}
+          <select bind:value={kind} aria-label="Kind">
+            <option value="">All kinds</option>
+            <option value="photo">Photos</option>
+            <option value="video">Videos</option>
+            <option value="note">Notes</option>
+            <option value="article">Articles</option>
+          </select>
+        {/if}
+        <label class="range">
+          <span>From</span>
+          <input type="date" bind:value={after} />
+        </label>
+        <label class="range">
+          <span>until</span>
+          <input type="date" bind:value={before} />
+        </label>
+      </div>
+    </div>
+  {/if}
+
+  {#if fixedKind === 'article' && total === 0 && !loading && !filtersActive}
+    <p class="empty">No articles yet. Start one and pull in captures from the stream.</p>
+  {/if}
   {#if fixedKind === 'article'}
     <!-- Trip-style cards: full-width cover, title, teaser, date. -->
     <ul class="articles">
@@ -105,7 +159,7 @@
         <li>
           <a href={`/a/${contentPath(item['@id'])}`}>
             {#if itemCover(item)}
-              <img src={itemCover(item)} alt="" loading="lazy" />
+              <img src={itemCover(item)} alt="" loading="lazy" crossorigin={MEDIA_CROSSORIGIN} />
             {:else}
               <div class="placeholder"></div>
             {/if}
@@ -131,7 +185,7 @@
           href={`/${item.kind === 'article' ? 'a' : 'e'}/${contentPath(item['@id'])}`}
         >
           {#if itemThumbnail(item)}
-            <img src={itemThumbnail(item)} alt="" loading="lazy" />
+            <img src={itemThumbnail(item)} alt="" loading="lazy" crossorigin={MEDIA_CROSSORIGIN} />
           {:else}
             <div class="note-preview">{kindIcons[item.kind ?? 'note']}</div>
           {/if}
@@ -155,19 +209,118 @@
 {/if}
 
 <style>
-  .filters {
+  .list-controls {
     display: flex;
-    gap: 0.5rem;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.8rem;
+    min-height: 2.75rem;
+  }
+  /* Chip-vocabulary toggle: hairline pill at rest, Harbor Mist when
+     filters are applied — the collapsed state must never hide that the
+     list is currently narrowed. */
+  .filter-toggle {
+    margin-left: auto;
+    font: inherit;
+    font-size: 0.9rem;
+    color: #42555b;
+    background: white;
+    border: 1px solid #dbe1e8;
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+  }
+  @media (hover: hover) {
+    .filter-toggle:hover {
+      background: #ecf3f4;
+    }
+  }
+  .filter-toggle.active {
+    background: #e1eef0;
+    border-color: #d4e5e8;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .filter-toggle:focus-visible,
+  .clear:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  .filters {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(20, 30, 40, 0.12);
+    padding: 0.7rem 0.9rem;
     margin-bottom: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .filters-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .filters-head strong {
+    font-size: 1rem;
+  }
+  .clear {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--primary);
+    background: none;
+    border: none;
+    padding: 0.2rem 0.4rem;
+    min-height: 2rem;
+    cursor: pointer;
+  }
+  .clear:hover {
+    text-decoration: underline;
+  }
+  .filter-fields {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
-  .filters select, .filters input {
+  .filter-fields select,
+  .filter-fields input {
     font: inherit;
     padding: 0.35rem 0.5rem;
     border-radius: 6px;
     border: 1px solid #b8c0cc;
+    min-height: 2.75rem;
+    box-sizing: border-box;
   }
-  .count { color: #5a6676; font-size: 0.85rem; }
+  .range {
+    flex: 1 1 8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #42555b;
+  }
+  /* The two date fields share one row on phones instead of stacking
+     full-width; 7rem fits "mm/dd/yyyy" plus the picker icon. */
+  .range input {
+    flex: 1 1 7rem;
+    min-width: 0;
+  }
+  .count {
+    color: #5a6676;
+    font-size: 0.85rem;
+    margin: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .filter-toggle {
+      transition: none;
+    }
+  }
+  .empty { color: #5a6676; margin: 1.2rem 0; }
   /* Article cards mirror the trips list. */
   .articles {
     list-style: none;

@@ -25,6 +25,15 @@
       .slice(0, 8)
   );
 
+  /* Typed text that isn't an existing keyword gets an explicit "Add" row —
+     Enter/comma also commit, but an invisible-only affordance reads as
+     "new tags are not possible". */
+  const showCreate = $derived.by(() => {
+    const clean = input.trim();
+    if (!canCreate || !clean || value.includes(clean)) return false;
+    return !filtered.some((s) => s.toLowerCase() === clean.toLowerCase());
+  });
+
   function add(tag: string) {
     const clean = tag.trim();
     if (!clean || value.includes(clean)) return;
@@ -73,8 +82,21 @@
       aria-label="Add tag"
     />
   </div>
-  {#if focused && filtered.length > 0}
+  {#if focused && (filtered.length > 0 || showCreate)}
     <ul class="suggestions">
+      {#if showCreate}
+        <li>
+          <!-- mousedown, not click: keep focus (and the dropdown) alive -->
+          <button
+            type="button"
+            class="create"
+            onmousedown={(event) => {
+              event.preventDefault();
+              add(input);
+            }}>＋ Add “{input.trim()}”</button
+          >
+        </li>
+      {/if}
       {#each filtered as suggestion (suggestion)}
         <li>
           <!-- mousedown, not click: keep focus (and the dropdown) alive -->
@@ -176,6 +198,10 @@
   }
   .suggestions button:hover {
     background: var(--primary-tint-hover, #ecf3f4);
+  }
+  .suggestions .create {
+    color: var(--primary);
+    font-weight: 600;
   }
   .hint {
     margin: 0.3rem 0 0;

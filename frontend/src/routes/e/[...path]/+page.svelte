@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import TagsInput from '$lib/components/TagsInput.svelte';
   import {
     browseUrl,
@@ -35,7 +36,9 @@
   let capturedAt = $state('');
   let subjects = $state<string[]>([]);
   let keywordSuggestions = $state<string[]>([]);
-  let canAddKeywords = $state(false);
+  // Seeded from the last fetched settings; permissive when nothing is known
+  // yet, so a failed fetch never locks tag creation for an allowed user.
+  let canAddKeywords = $state(api.settingsCached()?.can_add_keywords ?? true);
   let saving = $state(false);
   let flash = $state('');
   let error = $state('');
@@ -123,7 +126,7 @@
   <a class="back" href={backHref}>← Trip</a>
   <article>
     {#if entry['@type'] === 'Image'}
-      <img class="media" src={mediaUrl()} alt={entry.title} />
+      <img class="media" src={mediaUrl()} alt={entry.title} crossorigin={MEDIA_CROSSORIGIN} />
     {:else if entry['@type'] === 'File'}
       <!-- svelte-ignore a11y_media_has_caption -->
       <video class="media" controls preload="metadata" src={mediaUrl()}></video>

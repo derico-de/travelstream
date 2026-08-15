@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import type { Trip } from '$lib/api/types';
   import { contentPath, tripCoverUrl, formatDateRange } from '$lib/format';
 
@@ -31,7 +32,7 @@
       <li>
         <a href={`/t/${contentPath(trip['@id'])}`}>
           {#if tripCoverUrl(trip)}
-            <img src={tripCoverUrl(trip)} alt="" loading="lazy" />
+            <img src={tripCoverUrl(trip)} alt="" loading="lazy" crossorigin={MEDIA_CROSSORIGIN} />
           {:else}
             <div class="placeholder"></div>
           {/if}

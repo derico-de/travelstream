@@ -29,6 +29,7 @@
   }
 
   const stateLabels: Record<string, string> = {
+    staged: 'In review',
     captured: 'Waiting for its file',
     queued: 'Waiting to upload',
     uploading: 'Uploading',
@@ -37,7 +38,9 @@
   };
 
   function stateLabel(item: OutboxItem): string {
-    if (needsTrip(item) && item.state !== 'failed') return 'Needs a trip';
+    // Staged items say "In review" even without a trip: review comes first.
+    if (needsTrip(item) && item.state !== 'failed' && item.state !== 'staged')
+      return 'Needs a trip';
     return stateLabels[item.state];
   }
 </script>
@@ -87,6 +90,12 @@
             <button onclick={() => outbox.retry(item.id)}>Retry</button>
             <button class="danger" onclick={() => outbox.delete(item.id)}>Delete</button>
           </div>
+        {/if}
+        {#if item.state === 'staged'}
+          <p class="staged-hint">
+            Not queued yet — <a href="/capture/review">finish reviewing</a> to
+            start the upload.
+          </p>
         {/if}
         {#if item.state === 'captured' && item.pendingAttachment}
           <label class="attach">
@@ -199,4 +208,10 @@
     min-width: 0;
   }
   .assign-hint { color: #5a6676; }
+  .staged-hint {
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+    color: #5a6676;
+  }
+  .staged-hint a { color: var(--primary); }
 </style>

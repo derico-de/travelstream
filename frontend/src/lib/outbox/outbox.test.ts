@@ -296,6 +296,72 @@ describe('outbox', () => {
     expect(finished?.progress).toBe(1);
   });
 
+  it('staged items are held from drain until released, then upload with details', async () => {
+    const { outbox, transport, store } = makeOutbox();
+    const staged = await outbox.enqueue({
+      kind: 'photo',
+      tripPath: 'trips/alps',
+      title: 'IMG_2041',
+      staged: true,
+      blob: blob()
+    });
+
+    // Held: drain must not touch it, even online with a trip assigned.
+    await outbox.drain();
+    expect(transport.uploads).toHaveLength(0);
+    let [item] = await outbox.list();
+    expect(item.state).toBe('staged');
+
+    // Review edits amend in place.
+    await outbox.amendDetails(staged.id, {
+      title: 'Passo Gardena',
+      description: 'Top of the pass, first snow',
+      tags: ['dolomites', 'passes']
+    });
+    const stored = await store.get(staged.id);
+    expect(stored?.title).toBe('Passo Gardena');
+    expect(stored?.description).toBe('Top of the pass, first snow');
+    expect(stored?.tags).toEqual(['dolomites', 'passes']);
+
+    // Release queues it; the next drain delivers.
+    await outbox.releaseStaged();
+    [item] = await outbox.list();
+    expect(item.state).toBe('queued');
+    await outbox.drain();
+    [item] = await outbox.list();
+    expect(item.state).toBe('done');
+  });
+
+  it('amendDetails only touches staged items (queued edits go through the editor)', async () => {
+    const { outbox, store } = makeOutbox();
+    const queued = await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'p', blob: blob() });
+    await outbox.amendDetails(queued.id, { title: 'renamed' });
+    expect((await store.get(queued.id))?.title).toBe('p');
+  });
+
+  it('discardStaged deletes staged items and nothing else', async () => {
+    const { outbox } = makeOutbox();
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'keep', blob: blob() });
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'toss1', staged: true, blob: blob() });
+    await outbox.enqueue({ kind: 'video', tripPath: 't', title: 'toss2', staged: true, blob: blob() });
+
+    await outbox.discardStaged();
+
+    const items = await outbox.list();
+    expect(items.map((i) => i.title)).toEqual(['keep']);
+  });
+
+  it('staged survives a restart still held from drain', async () => {
+    const { outbox, store, transport } = makeOutbox();
+    await outbox.enqueue({ kind: 'photo', tripPath: 't', title: 'p', staged: true, blob: blob() });
+
+    const reopened = new Outbox({ store, transport, now: () => 2_000_000 });
+    await reopened.drain();
+    expect(transport.uploads).toHaveLength(0);
+    const [item] = await reopened.list();
+    expect(item.state).toBe('staged');
+  });
+
   it('camera-roll-reference items wait until the file is attached (iOS)', async () => {
     const { outbox, transport } = makeOutbox();
     const item = await outbox.enqueue({

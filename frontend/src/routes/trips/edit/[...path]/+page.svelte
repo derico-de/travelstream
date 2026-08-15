@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import { coverUrl, readImagePayload } from '$lib/format';
   import type { Trip } from '$lib/api/types';
 
@@ -49,6 +50,30 @@
     coverRemoved = true;
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     coverPreview = null;
+  }
+
+  /* Deletion is gated GitHub-style: the exact trip title, typed by hand,
+     arms the button. A whole trip's captures are at stake — a reflex-click
+     confirm dialog is not enough friction. */
+  let deleteOpen = $state(false);
+  let deleteConfirmation = $state('');
+  let deleteBusy = $state(false);
+  let deleteError = $state('');
+  const deleteArmed = $derived(
+    trip !== null && deleteConfirmation.trim() === trip.title
+  );
+
+  async function deleteTrip() {
+    if (!deleteArmed || deleteBusy) return;
+    deleteBusy = true;
+    deleteError = '';
+    try {
+      await api.delete(`/${path}`);
+      await goto('/');
+    } catch {
+      deleteBusy = false;
+      deleteError = 'Could not delete the trip - check your connection and try again.';
+    }
   }
 
   async function submit(event: SubmitEvent) {
@@ -105,7 +130,7 @@
     </div>
     <div class="cover">
       {#if coverSrc}
-        <img src={coverSrc} alt="Trip cover" />
+        <img src={coverSrc} alt="Trip cover" crossorigin={MEDIA_CROSSORIGIN} />
       {/if}
       <div class="cover-actions">
         <label class="cover-pick">
@@ -127,6 +152,51 @@
       <a href={`/t/${path}`}>Cancel</a>
     </div>
   </form>
+
+  <section class="danger" aria-labelledby="delete-heading">
+    <h2 id="delete-heading">Delete this trip</h2>
+    <p>
+      Deletes <strong>{trip.title}</strong> with every photo, video, note and
+      article in it — from this site and the published blog. There is no undo.
+    </p>
+    {#if !deleteOpen}
+      <button type="button" class="delete-open" onclick={() => (deleteOpen = true)}>
+        Delete trip…
+      </button>
+    {:else}
+      <label class="confirm">
+        Type <strong>{trip.title}</strong> to confirm
+        <input
+          bind:value={deleteConfirmation}
+          autocapitalize="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+      {#if deleteError}<p class="error" role="alert">{deleteError}</p>{/if}
+      <div class="confirm-actions">
+        <button
+          type="button"
+          class="delete-confirm"
+          disabled={!deleteArmed || deleteBusy}
+          onclick={deleteTrip}
+        >
+          {deleteBusy ? 'Deleting…' : 'Delete this trip forever'}
+        </button>
+        <button
+          type="button"
+          class="delete-cancel"
+          onclick={() => {
+            deleteOpen = false;
+            deleteConfirmation = '';
+            deleteError = '';
+          }}
+        >
+          Keep the trip
+        </button>
+      </div>
+    {/if}
+  </section>
 {/if}
 
 <style>
@@ -226,5 +296,69 @@
   .error {
     color: #b3261e;
     font-size: 0.9rem;
+  }
+  .danger {
+    max-width: 26rem;
+    margin-top: 2.4rem;
+    padding: 0.9rem;
+    background: white;
+    border: 1px solid #dbe1e8;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(20, 30, 40, 0.12);
+  }
+  .danger h2 {
+    margin: 0 0 0.3rem;
+    font-size: 1rem;
+  }
+  .danger p {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+    color: #42555b;
+  }
+  .delete-open,
+  .delete-cancel {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    min-height: 2.75rem;
+    border-radius: 6px;
+    border: 1px solid #b8c0cc;
+    background: white;
+    cursor: pointer;
+  }
+  .delete-open {
+    color: #b3261e;
+  }
+  .confirm {
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    color: #42555b;
+  }
+  .confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .delete-confirm {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    min-height: 2.75rem;
+    border-radius: 6px;
+    border: none;
+    background: #b3261e;
+    color: white;
+    cursor: pointer;
+  }
+  .delete-confirm:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .delete-open:focus-visible,
+  .delete-cancel:focus-visible,
+  .delete-confirm:focus-visible,
+  .confirm input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 </style>

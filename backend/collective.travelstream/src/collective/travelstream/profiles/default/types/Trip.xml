@@ -50,7 +50,6 @@
     <element value="plone.constraintypes"/>
     <element value="plone.nextprevioustoggle"/>
     <element value="plone.nextpreviousenabled"/>
-    <element value="plone.navigationroot"/>
   </property>
 
   <alias from="(Default)" to="(dynamic view)"/>

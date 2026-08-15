@@ -2,51 +2,23 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { api, authenticated, keepSessionFresh, logout } from '$lib/session';
+  import { authenticated, keepSessionFresh, logout } from '$lib/session';
   import { startOutboxDraining } from '$lib/outbox';
+  import { clearLastTrip } from '$lib/capture/last-trip';
   import OutboxStatus from '$lib/components/OutboxStatus.svelte';
 
   let { children } = $props();
 
-  // Trip context of the current route: /t/<trip>, /trips/edit/<trip>, or
-  // the parent of an entry (/e/) or article (/a/) path.
-  const tripPath = $derived.by(() => {
-    const pathname = decodeURIComponent($page.url.pathname);
-    if (pathname.startsWith('/t/')) return pathname.slice(3);
-    if (pathname.startsWith('/trips/edit/')) return pathname.slice('/trips/edit/'.length);
-    if (pathname.startsWith('/e/') || pathname.startsWith('/a/')) {
-      const segments = pathname.slice(3).split('/').filter(Boolean);
-      segments.pop();
-      return segments.join('/');
-    }
-    return '';
+  /** Capture from a trip page targets that trip; elsewhere it keeps the
+   * current capture selection until the Trips overview resets it. */
+  const captureHref = $derived.by(() => {
+    const match = $page.url.pathname.match(/^\/t\/(.+?)\/?$/);
+    if (!match) return '/capture';
+    return `/capture?trip=${encodeURIComponent(decodeURIComponent(match[1]))}`;
   });
 
-  const tripTitles = new Map<string, string>();
-  let tripTitle = $state('');
-
   $effect(() => {
-    const path = tripPath.replace(/\/$/, '');
-    if (!path || path === 'trips') {
-      tripTitle = '';
-      return;
-    }
-    const cached = tripTitles.get(path);
-    if (cached !== undefined) {
-      tripTitle = cached;
-      return;
-    }
-    tripTitle = '';
-    api
-      .get<{ '@type'?: string; title?: string }>(`/${path}`)
-      .then((data) => {
-        // Only genuine Trips get their name in the bar (an entry directly
-        // under the trips folder would resolve to the folder itself).
-        const title = data['@type'] === 'Trip' ? (data.title ?? '') : '';
-        tripTitles.set(path, title);
-        if (tripPath.replace(/\/$/, '') === path) tripTitle = title;
-      })
-      .catch(() => {});
+    if ($page.url.pathname === '/') clearLastTrip();
   });
 
   onMount(() => {
@@ -66,16 +38,14 @@
   {#if $authenticated}
     <header class="topbar">
       <a href="/" class="brand">Travelstream</a>
-      {#if tripTitle}
-        <a class="trip-name" href={`/t/${tripPath}`}>{tripTitle}</a>
-      {/if}
       <div class="topbar-actions">
         <OutboxStatus />
         <button class="logout" onclick={() => logout()}>Log out</button>
       </div>
     </header>
   {/if}
-  <main class:fill={$page.url.pathname.startsWith('/capture')}>
+  <!-- fill is the capture home only: review/note are normal scrolling pages. -->
+  <main class:fill={$page.url.pathname === '/capture'}>
     {@render children()}
   </main>
   {#if $authenticated}
@@ -93,7 +63,7 @@
         <span class="nav-label">Trips</span>
       </a>
       <a
-        href="/capture"
+        href={captureHref}
         class="nav-btn"
         aria-current={$page.url.pathname.startsWith('/capture') ? 'page' : undefined}
       >
@@ -119,6 +89,10 @@
     --primary-tint: #e1eef0;
     --primary-tint-hover: #ecf3f4;
     --primary-tint-active: #d4e5e8;
+    /* Rendered height of .bottom-nav (3rem buttons + 0.3rem top padding +
+       safe-area-aware bottom padding + 1px border); sticky page footers
+       offset by this so the nav keeps the screen's bottom edge to itself. */
+    --bottom-nav-clearance: calc(3.3rem + max(0.3rem, env(safe-area-inset-bottom)) + 1px);
   }
   :global(body) {
     margin: 0;
@@ -134,7 +108,6 @@
     flex-direction: column;
   }
   .topbar {
-    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -142,25 +115,6 @@
     min-height: 3rem;
     box-sizing: border-box;
     background: var(--primary);
-  }
-  /* Centered over the whole bar, clipped before it can touch the brand
-     or the actions on narrow screens. */
-  .trip-name {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 38%;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: white;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .trip-name:focus-visible {
-    outline: 2px solid white;
-    outline-offset: 2px;
   }
   .brand {
     color: white;

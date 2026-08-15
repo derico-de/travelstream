@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '$lib/session';
+  import { MEDIA_CROSSORIGIN } from '$lib/api/base';
   import { itemThumbnail } from '$lib/format';
   import { primeMediaCache } from '$lib/media';
   import type { TimelineItem } from '$lib/api/types';
@@ -211,7 +212,7 @@
               onclick={() => (multiple ? toggle(item) : onpick?.(item))}
             >
               {#if itemThumbnail(item)}
-                <img src={itemThumbnail(item)} alt="" loading="lazy" />
+                <img src={itemThumbnail(item)} alt="" loading="lazy" crossorigin={MEDIA_CROSSORIGIN} />
               {:else}
                 <span class="fallback" aria-hidden="true">🎬</span>
               {/if}

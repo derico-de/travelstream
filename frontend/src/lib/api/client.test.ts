@@ -117,6 +117,33 @@ describe('ApiClient auth', () => {
     expect(api.resolve('/@login')).toBe('/++api++/@login');
   });
 
+  it('caches settings for offline seeding (last fetch wins, absent is null)', async () => {
+    // Node has no localStorage; the client treats it as best-effort.
+    const backing = new Map<string, string>();
+    (globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => backing.get(k) ?? null,
+      setItem: (k: string, v: string) => void backing.set(k, v),
+      removeItem: (k: string) => void backing.delete(k)
+    };
+    try {
+      const { fetchFn } = fakeFetch(() => ({
+        article_type: 'Document',
+        can_add_keywords: true
+      }));
+      const api = new ApiClient({ fetchFn, tokenStorage: memoryTokenStorage() });
+      expect(api.settingsCached()).toBeNull();
+
+      await api.settings();
+      expect(api.settingsCached()?.can_add_keywords).toBe(true);
+
+      // A fresh client (new page load, offline) still sees the cache.
+      const offline = new ApiClient({ tokenStorage: memoryTokenStorage() });
+      expect(offline.settingsCached()?.can_add_keywords).toBe(true);
+    } finally {
+      delete (globalThis as Record<string, unknown>).localStorage;
+    }
+  });
+
   it('keeps the query string of batch links (b_start would be lost)', () => {
     const api = new ApiClient({ baseUrl: '/++api++' });
     expect(
@@ -126,5 +153,42 @@ describe('ApiClient auth', () => {
     expect(
       api.resolve('https://site.example/++api++/trips/alps/@travel-timeline?b_start=25')
     ).toBe('/++api++/trips/alps/@travel-timeline?b_start=25');
+  });
+
+  describe('separately deployed backend (absolute base)', () => {
+    const base = 'https://travel.planetcrazy.de/++api++';
+
+    it('sends relative paths to the configured backend origin', () => {
+      const api = new ApiClient({ baseUrl: base });
+      expect(api.resolve('/@login')).toBe(`${base}/@login`);
+      expect(api.resolve('trips')).toBe(`${base}/trips`);
+    });
+
+    it('does not double the base path on URLs the backend hands back', () => {
+      // The killer case: a TUS Location, or any @id, already carries
+      // /++api++. Prefixing the whole absolute base would produce
+      // .../++api++/++api++/... and every upload resume would 404.
+      const api = new ApiClient({ baseUrl: base });
+      expect(api.resolve(`${base}/trips/alps/@tus-upload/abc123`)).toBe(
+        `${base}/trips/alps/@tus-upload/abc123`
+      );
+      expect(api.resolve('/++api++/trips/alps/@travel-timeline?b_start=25')).toBe(
+        `${base}/trips/alps/@travel-timeline?b_start=25`
+      );
+    });
+
+    it('rebases URLs the backend claims for some other host', () => {
+      // Plone builds Locations from its own virtual-host view; if that is
+      // misconfigured the app must still talk to the backend we chose.
+      const api = new ApiClient({ baseUrl: base });
+      expect(api.resolve('http://backend:8080/++api++/trips/alps')).toBe(
+        `${base}/trips/alps`
+      );
+    });
+
+    it('trims a trailing slash so URLs never contain //', () => {
+      const api = new ApiClient({ baseUrl: `${base}/` });
+      expect(api.resolve('/trips')).toBe(`${base}/trips`);
+    });
   });
 });
