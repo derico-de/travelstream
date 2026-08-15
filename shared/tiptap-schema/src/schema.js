@@ -27,6 +27,7 @@ import Strike from '@tiptap/extension-strike';
 import Text from '@tiptap/extension-text';
 import Underline from '@tiptap/extension-underline';
 
+/** @type {(keyof typeof PICTURE_VARIANT_BY_SCALE)[]} */
 const IMAGE_SCALES = [
   'thumb',
   'mini',
@@ -77,6 +78,7 @@ export const TravelImage = Node.create({
 
   renderHTML({ node }) {
     const { uid, alt, caption } = node.attrs;
+    /** @type {keyof typeof PICTURE_VARIANT_BY_SCALE} */
     const scale = IMAGE_SCALES.includes(node.attrs.scale)
       ? node.attrs.scale
       : DEFAULT_IMAGE_SCALE;
@@ -142,7 +144,7 @@ export const TravelVideo = Node.create({
  * Published markup follows the plone.gallery contract: flexbin classes for
  * the tile grid, `a.spotlight` anchors (grouped per `.spotlight-group`)
  * for zoom. Videos stay plain links, played inline by the browser via
- * @@display-media — the bundled Spotlight has no video support.
+ * `@@display-media` — the bundled Spotlight has no video support.
  */
 export const TravelGallery = Node.create({
   name: 'travelGallery',
