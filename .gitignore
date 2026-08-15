@@ -1,7 +1,26 @@
+# Per-machine tool config
 .devshell.json
+.sandboxsh.json
+.pi/
+
 .scratch/
 node_modules/
 .pnpm-store/
 deploy/.env
 deploy/backups/
 frontend/.impeccable/
+
+# Zope instance state. The etc/ configs are tracked deliberately; the rest
+# (Data.fs and blobs, pid files, tus uploads) is per-machine runtime state.
+# Excluding the *contents* rather than the directory itself, so the
+# negations below can re-include etc/ — git never descends into an
+# excluded directory.
+backend/collective.travelstream/var/*
+!backend/collective.travelstream/var/instance/
+backend/collective.travelstream/var/instance/*
+!backend/collective.travelstream/var/instance/etc/
+
+# Editor swap files
+*.swp
+*.swo
+*~
