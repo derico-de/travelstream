@@ -8,6 +8,7 @@ article creation follow the setting".
 
 import logging
 
+from collective.travelstream.subscribers import addon_installed
 from plone.dexterity.interfaces import IDexterityFTI
 from zope.component import queryUtility
 from zope.component.hooks import getSite
@@ -21,6 +22,8 @@ RECORD_NAME = "collective.travelstream.article_type"
 def handler(event):
     """Handle IRecordModifiedEvent for the article-type registry record."""
     if getattr(event.record, "__name__", None) != RECORD_NAME:
+        return
+    if not addon_installed():
         return
     old, new = event.oldValue, event.newValue
     if not new or old == new:

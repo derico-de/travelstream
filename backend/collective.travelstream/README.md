@@ -1,6 +1,6 @@
 # Travelstream
 
-Self-hosted travel content hub: capture archive, curation space and public blog in one Plone site
+Self-hosted travel content hub: capture archive, curation space and public blog in one Plone site. This is the backend for the travelstream PWA. Without it it has not much of use.
 
 ## Features
 

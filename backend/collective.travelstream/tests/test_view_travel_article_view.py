@@ -4,9 +4,12 @@ from plone import api
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from zope.component import getMultiAdapter
+from zope.component import queryMultiAdapter
 from zope.publisher.browser import TestRequest
 
 from collective.travelstream.testing import INTEGRATION_TESTING
+
+from . import layered_request
 
 
 class TestViewTravelArticleView:
@@ -27,18 +30,24 @@ class TestViewTravelArticleView:
 
     def test_view_registered(self):
         """Test view is registered."""
-        request = TestRequest()
         view = getMultiAdapter(
-            (self.context, request),
+            (self.context, layered_request()),
             name="travel-article-view",
         )
         assert view is not None
 
     def test_view_name(self):
         """Test view __name__."""
-        request = TestRequest()
         view = getMultiAdapter(
-            (self.context, request),
+            (self.context, layered_request()),
             name="travel-article-view",
         )
         assert view.__name__ == "travel-article-view"
+
+    def test_view_absent_without_addon_layer(self):
+        """The view must not exist in sites without the add-on installed."""
+        view = queryMultiAdapter(
+            (self.context, TestRequest()),
+            name="travel-article-view",
+        )
+        assert view is None

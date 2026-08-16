@@ -8,13 +8,17 @@
       for="Products.CMFPlone.interfaces.IPloneSiteRoot"
       class=".travelstream.TravelstreamControlPanelView"
       permission="cmf.ManagePortal"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
+  <!-- Request discriminator is the add-on layer, not Interface: otherwise
+       @controlpanels lists this panel in every site of the instance, where
+       reading it would hit registry records that do not exist. -->
   <adapter
       factory=".travelstream.TravelstreamControlPanelAdapter"
       provides="plone.restapi.controlpanels.interfaces.IControlpanel"
       for="Products.CMFPlone.interfaces.IPloneSiteRoot
-           zope.interface.Interface"
+           collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
 </configure>

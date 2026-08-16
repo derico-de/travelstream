@@ -14,15 +14,20 @@ still-published article. @travel-publish retracts media explicitly.
 from plone import api
 
 from collective.travelstream.publishing import publish_embedded_media
+from collective.travelstream.subscribers import addon_installed
 
 
 def article_transitioned(obj, event):
+    if not addon_installed():
+        return
     if getattr(event.new_state, "id", None) != "published":
         return
     publish_embedded_media(obj)
 
 
 def article_modified(obj, event):
+    if not addon_installed():
+        return
     if api.content.get_state(obj, default=None) != "published":
         return
     publish_embedded_media(obj)

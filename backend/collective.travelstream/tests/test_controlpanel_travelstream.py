@@ -2,8 +2,14 @@
 import pytest
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
+from plone.restapi.controlpanels.interfaces import IControlpanel
+from zope.component import getMultiAdapter
+from zope.component import queryMultiAdapter
+from zope.publisher.browser import TestRequest
 
 from collective.travelstream.testing import INTEGRATION_TESTING
+
+from . import layered_request
 
 
 class TestControlPanelTravelstream:
@@ -27,25 +33,27 @@ class TestControlPanelTravelstream:
 
     def test_controlpanel_view(self):
         """Test control panel view is accessible."""
-        from zope.component import getMultiAdapter
-        from zope.publisher.browser import TestRequest
-
-        request = TestRequest()
         view = getMultiAdapter(
-            (self.portal, request),
+            (self.portal, layered_request()),
             name="travelstream-controlpanel",
         )
         assert view is not None
 
     def test_restapi_controlpanel_adapter(self):
         """Test plone.restapi control panel adapter is registered."""
-        from plone.restapi.controlpanels.interfaces import IControlpanel
-        from zope.component import queryMultiAdapter
-        from zope.publisher.browser import TestRequest
-
-        request = TestRequest()
         cp_adapter = queryMultiAdapter(
-            (self.portal, request),
+            (self.portal, layered_request()),
             IControlpanel,
         )
         assert cp_adapter is not None
+
+    def test_controlpanel_absent_without_addon_layer(self):
+        """Neither the form nor the REST panel leaks into other sites."""
+        request = TestRequest()
+        assert (
+            queryMultiAdapter(
+                (self.portal, request), name="travelstream-controlpanel"
+            )
+            is None
+        )
+        assert queryMultiAdapter((self.portal, request), IControlpanel) is None

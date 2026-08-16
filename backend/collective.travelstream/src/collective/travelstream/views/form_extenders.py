@@ -7,6 +7,7 @@ representation.
 """
 
 from collective.travelstream.behaviors.itravelarticle import ITravelArticle
+from collective.travelstream.interfaces import ICollectiveTravelstreamLayer
 from plone.dexterity.browser.add import DefaultAddForm
 from plone.dexterity.browser.edit import DefaultEditForm
 from plone.dexterity.interfaces import IDexterityFTI
@@ -14,7 +15,6 @@ from plone.z3cform.fieldsets.extensible import FormExtender
 from zope.component import adapter
 from zope.component import queryUtility
 from zope.interface import Interface
-from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 
 
 ARTICLE_BEHAVIOR = "collective.travelstream.article"
@@ -29,7 +29,7 @@ class OmitRichTextBase(FormExtender):
             pass
 
 
-@adapter(ITravelArticle, IDefaultBrowserLayer, DefaultEditForm)
+@adapter(ITravelArticle, ICollectiveTravelstreamLayer, DefaultEditForm)
 class OmitRichTextOnEdit(OmitRichTextBase):
     """Drop the stock RichText field from the edit form of articles."""
 
@@ -37,9 +37,14 @@ class OmitRichTextOnEdit(OmitRichTextBase):
         self._remove_richtext()
 
 
-@adapter(Interface, IDefaultBrowserLayer, DefaultAddForm)
+@adapter(Interface, ICollectiveTravelstreamLayer, DefaultAddForm)
 class OmitRichTextOnAdd(OmitRichTextBase):
-    """Drop the stock RichText field when adding the article type."""
+    """Drop the stock RichText field when adding the article type.
+
+    Bound to the add-on layer: the context discriminator is ``Interface``,
+    so without it this would run on every Dexterity add form of every site
+    in the instance.
+    """
 
     def update(self):
         fti = queryUtility(IDexterityFTI, name=self.form.portal_type)

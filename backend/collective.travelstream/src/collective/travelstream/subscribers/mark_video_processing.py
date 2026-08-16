@@ -8,6 +8,7 @@ fast; poster frame and faststart remux happen in the worker container.
 import logging
 
 from collective.travelstream.content.trip import ITrip
+from collective.travelstream.subscribers import addon_installed
 
 
 logger = logging.getLogger("collective.travelstream")
@@ -24,6 +25,8 @@ def _inside_trip(obj):
 
 def handler(obj, event):
     """Handle ``IObjectAddedEvent`` for ``IFile``."""
+    if not addon_installed():
+        return
     if not _inside_trip(obj):
         return
     file_field = getattr(obj, "file", None)

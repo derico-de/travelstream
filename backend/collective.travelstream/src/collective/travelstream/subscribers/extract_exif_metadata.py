@@ -12,6 +12,7 @@ from datetime import datetime
 from io import BytesIO
 
 from collective.travelstream.content.trip import ITrip
+from collective.travelstream.subscribers import addon_installed
 from PIL import ExifTags
 from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
@@ -87,6 +88,8 @@ def extract_exif(data):
 
 def handler(obj, event):
     """Handle object added/modified for ``IImage`` inside a Trip."""
+    if not addon_installed():
+        return
     if not _inside_trip(obj):
         return
 

@@ -9,6 +9,7 @@
       factory=".travel_timeline.TravelTimelineService"
       name="@travel-timeline"
       permission="zope2.View"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
   <plone:service
@@ -17,6 +18,7 @@
       factory=".travel_geojson.TravelGeojsonService"
       name="@travel-geojson"
       permission="zope2.View"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
   <plone:service
@@ -25,6 +27,7 @@
       factory=".travelstream_settings.TravelstreamSettingsService"
       name="@travelstream-settings"
       permission="zope2.View"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
   <plone:service
@@ -33,6 +36,7 @@
       factory=".travel_publish.TravelPublishService"
       name="@travel-publish"
       permission="cmf.ModifyPortalContent"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
 </configure>

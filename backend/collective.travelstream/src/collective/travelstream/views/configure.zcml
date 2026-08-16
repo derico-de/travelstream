@@ -3,6 +3,11 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="collective.travelstream">
 
+  <!-- Everything here is bound to the add-on's browser layer: ZCML is
+       instance-global, and a Plone site without the add-on installed must
+       see no trace of it. The form extenders take the layer through their
+       @adapter declaration. -->
+
   <adapter
       factory=".form_extenders.OmitRichTextOnEdit"
       provides="plone.z3cform.fieldsets.interfaces.IFormExtender"
@@ -20,6 +25,7 @@
       for="*"
       class=".display_media.DisplayMedia"
       permission="zope2.View"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
   <browser:page
@@ -28,6 +34,7 @@
       class=".travel_article_view.TravelArticleView"
       template="travel_article_view.pt"
       permission="zope2.View"
+      layer="collective.travelstream.interfaces.ICollectiveTravelstreamLayer"
       />
 
 </configure>
