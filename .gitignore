@@ -20,6 +20,16 @@ backend/collective.travelstream/var/*
 backend/collective.travelstream/var/instance/*
 !backend/collective.travelstream/var/instance/etc/
 
+# Same for the plone-setup instance: pid files and the Data.fs/blob directory
+# are per-machine runtime state. The .gitkeep keeps var/ present on checkout.
+backend/plone-setup/var/instance/*.pid
+backend/plone-setup/var/instance/var/*
+!backend/plone-setup/var/instance/var/.gitkeep
+
+# mxdev checkouts (symlinks/clones) land here; only the placeholder is tracked.
+backend/plone-setup/sources/*
+!backend/plone-setup/sources/.gitkeep
+
 # Editor swap files
 *.swp
 *.swo
