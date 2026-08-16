@@ -24,6 +24,7 @@ dependencies = [
     "Paste",
     "plone.app.caching",
     "plone.app.upgrade",
+    "collective-travelstream",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +58,14 @@ base_path = "var"
 
 [tool.uv]
 constraint-dependencies = ["Products.CMFPlone==6.2.1"]
+
+[tool.uv.workspace]
+members = [
+    "sources/collective.travelstream",
+]
+
+[tool.uv.sources]
+collective-travelstream = { workspace = true, editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

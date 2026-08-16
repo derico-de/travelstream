@@ -1,0 +1,5 @@
+###############################################################################
+# mxdev development sources
+-e ./sources/collective.travelstream
+
+
