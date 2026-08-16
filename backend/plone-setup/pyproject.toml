@@ -1,0 +1,92 @@
+[project]
+name = "plone-setup"
+version = "1.0.0"
+description = "A Plone project"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "GPL-2.0-or-later"}
+authors = [
+    {name = "Maik Derstappen", email = "md@derico.de"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Plone",
+    "Framework :: Plone :: 6.2",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "plone.classicui",
+    "Plone==6.2.1",
+    "Paste",
+    "plone.app.caching",
+    "plone.app.upgrade",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-plone>=0.5.0",
+    "plone.app.testing",
+    "plone.testing",
+]
+
+[dependency-groups]
+dev = [
+    "invoke",
+    "watchdog",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.plone.project.settings]
+plone_version = "6.2.1"
+distribution = "plone.classicui"
+db_storage = "instance"
+created_at = "2026-08-16"
+instances = ["instance"]
+base_path = "var"
+
+[tool.uv]
+constraint-dependencies = ["Products.CMFPlone==6.2.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "W",    # pycodestyle warnings
+    "C90",  # mccabe complexity
+    "B",    # bugbear
+    "S",    # bandit (security)
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "PGH",  # pygrep-hooks
+]
+ignore = ["E731"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["plone-setup"]
+
+[tool.ruff.format]
+preview = true
