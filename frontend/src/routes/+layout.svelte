@@ -27,6 +27,16 @@
     if (!$authenticated && $page.url.pathname !== '/login') {
       goto('/login');
     }
+    // Register the service worker: offline shell, image cache, and the
+    // Web Share Target POST handler (src/service-worker.ts). Deliberately
+    // not vite-pwa's virtual:pwa-register — importing the virtual modules
+    // pulls the PWA plugin into the SSR bundle, where its manifest
+    // injection runs before the client build exists and the build dies.
+    // The worker updates itself (skipWaiting + clientsClaim), so plain
+    // registration is all that's needed. Absent in `vite dev`.
+    if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+      void navigator.serviceWorker.register('/service-worker.js');
+    }
   });
 </script>
 

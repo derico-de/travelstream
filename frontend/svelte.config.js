@@ -7,7 +7,12 @@ const config = {
   kit: {
     adapter: adapter({
       fallback: 'index.html'
-    })
+    }),
+    // vite-pwa registers src/service-worker.ts itself (with autoUpdate
+    // semantics); SvelteKit's built-in registration would double-register.
+    serviceWorker: {
+      register: false
+    }
   }
 };
 

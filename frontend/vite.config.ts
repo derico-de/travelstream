@@ -2,26 +2,28 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
-// Keep in step with src/lib/api/base.ts: same default, same env var.
-const apiBase = (process.env.VITE_API_BASE || '/++api++').replace(/\/+$/, '');
-const apiIsAbsolute = /^https?:\/\//.test(apiBase);
-
-const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-// Hashed image scales are content-addressed, so cache-first is safe.
-// Workbox only honours a RegExp against a cross-origin URL when the match
-// starts at index 0, so anchor the pattern at the origin whenever the API
-// is absolute — an unanchored pattern would silently never match and
-// offline photos would quietly stop working.
-const imageScalePattern = new RegExp(
-  `${apiIsAbsolute ? '^' : ''}${escapeRe(apiBase)}/.*/@@images/[^/]+-\\d+-[0-9a-f]+\\.\\w+$`
-);
-
 export default defineConfig({
   plugins: [
     sveltekit(),
     SvelteKitPWA({
       registerType: 'autoUpdate',
+      // Custom service worker (src/service-worker.ts, SvelteKit's own
+      // convention — the plugin injects the precache manifest into Kit's
+      // built worker): precache + SPA fallback + the image-scale cache
+      // live there now, because receiving files from the Android share
+      // sheet (Web Share Target level 2) needs a POST fetch handler that
+      // generateSW cannot express.
+      strategies: 'injectManifest',
+      // Pure SPA: +layout.ts sets `prerender = false`, so the static adapter
+      // only emits the fallback shell. `spa` puts that shell (build/index.html,
+      // written after this plugin runs) into the precache manifest with a
+      // revision taken from _app/version.json - without it navigateFallback
+      // points at a URL workbox never precached and the whole SW throws
+      // "non-precached-url" on registration.
+      kit: {
+        adapterFallback: 'index.html',
+        spa: true
+      },
       manifest: {
         name: 'Travelstream',
         short_name: 'Travelstream',
@@ -33,27 +35,33 @@ export default defineConfig({
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/\+\+api\+\+/, /^\/@@/],
-        runtimeCaching: [
-          {
-            // The hash changes when the image does, so cache-first is safe
-            // indefinitely. Cross-origin responses only reach this cache
-            // when the <img> carries crossorigin="anonymous" and the
-            // backend allows the app's origin (see lib/api/base.ts).
-            urlPattern: imageScalePattern,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'plone-image-scales',
-              expiration: { maxEntries: 500, purgeOnQuotaError: true },
-              cacheableResponse: { statuses: [200] }
-            }
+        ],
+        // Lists the app in Android's share sheet (installed WebAPKs only).
+        // The share arrives as a POST that src/sw.ts intercepts and hands
+        // to /capture/share; changing action/params requires Chrome to
+        // re-mint the WebAPK (reinstall to see it immediately).
+        share_target: {
+          action: '/capture/share',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [{ name: 'media', accept: ['image/*', 'video/*'] }]
           }
-        ]
+        }
+      },
+      injectManifest: {
+        // Globs run against .svelte-kit/output, which only ever holds client/
+        // and server/ here. Scope them to client/ ourselves and set an empty
+        // modifyURLPrefix: that flag is what makes @vite-pwa/sveltekit leave
+        // globPatterns alone instead of appending its own
+        // "prerendered/**/*.{html,json}", which matches nothing in an SPA and
+        // makes workbox warn on every build. Empty means identity transform,
+        // so URLs are untouched.
+        globPatterns: ['client/**/*.{js,css,svg,png,woff2,webmanifest}'],
+        modifyURLPrefix: {}
       }
     })
   ],

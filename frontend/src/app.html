@@ -6,6 +6,10 @@
     <meta name="theme-color" content="#0e5f6d" />
     <link rel="icon" href="%sveltekit.assets%/icon-192.png" />
     <link rel="apple-touch-icon" href="%sveltekit.assets%/icon-192.png" />
+    <!-- Installability (Android WebAPK — also the prerequisite for the app
+         appearing in the share sheet). Static link, not virtual:pwa-info:
+         see the service-worker note in routes/+layout.svelte. -->
+    <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

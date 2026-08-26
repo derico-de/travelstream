@@ -3,8 +3,9 @@
   import { page } from '$app/stores';
   import { api } from '$lib/session';
   import { outbox, outboxItems } from '$lib/outbox';
-  import { extractPhotoMetadata, currentPosition } from '$lib/capture/exif';
+  import { currentPosition } from '$lib/capture/exif';
   import { takePendingFlash } from '$lib/capture/flash';
+  import { stageMediaFile } from '$lib/capture/stage';
   import { rememberLastTrip, recallLastTrip } from '$lib/capture/last-trip';
   import {
     formatBytes,
@@ -139,26 +140,7 @@
     rememberLastTrip(tripPath);
     try {
       for (const file of Array.from(fileList)) {
-        // EXIF is a fast local read; keep it. GPS can take seconds - the
-        // item is committed first, position attached when it arrives.
-        const metadata = kind === 'photo' ? await extractPhotoMetadata(file) : {};
-        // Gallery picks often happen days after the moment: without EXIF
-        // (videos, stripped photos) the file's own mtime is the honest
-        // capture time, not "now".
-        if (!metadata.capturedAt && file.lastModified) {
-          metadata.capturedAt = new Date(file.lastModified).toISOString();
-        }
-        const item = await outbox.enqueue({
-          kind,
-          tripPath,
-          staged: true,
-          title: file.name.replace(/\.[^.]+$/, ''),
-          blob: file,
-          filename: file.name,
-          contentType: file.type || 'application/octet-stream',
-          ...metadata
-        });
-        if (item.latitude === undefined) attachPositionLater(item.id);
+        await stageMediaFile(kind, tripPath, file, { attachPosition: true });
       }
       await goto('/capture/review');
     } catch (error) {
