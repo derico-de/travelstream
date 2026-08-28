@@ -144,6 +144,86 @@ containerised.
 Your existing certificates and ACME account are untouched; Caddy just adds
 two more names to the ones it already manages.
 
+### Variant — a standalone file in `conf.d`
+
+`systemctl edit caddy` sets the environment of the whole daemon: there is
+no per-site scoping for `{$VAR}` placeholders, so a second site of yours
+reading `{$PWA_ROOT}` would silently pick up Travelstream's value. Two ways
+around it, depending on which you find cheaper.
+
+**Keep the import, make the defaults true.** Symlink the checkout to the
+path the shipped file already defaults to, and set nothing:
+
+```sh
+sudo ln -s /home/plone/travel.planetcrazy.de/travelstream /srv/travelstream
+```
+
+**Or wire the values in literally**, in your own
+`/etc/caddy/conf.d/app.travel.planetcrazy.de.conf`, and do not import
+[`Caddyfile`](./Caddyfile) at all. Useful when Plone Classic already has
+its own conf on the host and only the app host is new:
+
+```caddyfile
+app.travel.planetcrazy.de {
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/app.travel.planetcrazy.de.access.log
+		format console
+	}
+
+	handle /health {
+		respond 200
+	}
+
+	handle_path /++api++/* {
+		rewrite * /VirtualHostBase/https/{host}:443/Plone/++api++/VirtualHostRoot{uri}
+		reverse_proxy 127.0.0.1:8080 {
+			transport http {
+				dial_timeout 10s
+				response_header_timeout 600s
+			}
+		}
+	}
+
+	handle {
+		root * /srv/app.travel.planetcrazy.de/build
+
+		@immutable path /_app/immutable/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		@mutable not path /_app/immutable/*
+		header @mutable Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}
+```
+
+with `/srv/app.travel.planetcrazy.de` a symlink to the checkout's
+`frontend/` (root is `<link>/build`, for the same reason the compose mount
+is one level up — the adapter recreates `build/` on every rebuild).
+
+Three things this variant gets wrong easily:
+
+- **`handle` blocks, not bare directives.** Caddy orders directives by its
+  own table rather than by line order, and `try_files` runs before
+  `respond` — so a `/health` written as a top-level `respond` is rewritten
+  to `/index.html` before its matcher is ever evaluated, and answers with
+  the SPA shell. Wrapping each branch in `handle` makes the order explicit.
+- **`/++api++` still belongs here**, even when Plone Classic is configured
+  elsewhere. It is not the Plone site; it is the API on the *app's* origin,
+  which is [the one rule](#the-one-rule-the-api-stays-on-the-apps-origin).
+  Both blocks proxy the same Zope, each with its own `VirtualHostBase`.
+- **`Cache-Control` is not optional.** `file_server` sends `Etag` and
+  `Last-Modified` but no `Cache-Control`, which leaves `index.html`,
+  `sw.js` and `_app/version.json` to browser heuristic caching — the exact
+  way clients get stranded on an old build.
+
+The cost of this variant is drift: it is a copy, so changes to
+[`Caddyfile`](./Caddyfile) do not reach it. Diff the two when you update.
+
 ## Option B — Caddy inside the compose stack
 
 For a box that only serves Travelstream: everything stays in one file and
@@ -467,6 +547,7 @@ browser for the header's lifetime.
 | Certificate issuance fails | port 80 blocked, or the DNS record does not resolve to this server yet; `docker compose logs web` / `journalctl -u caddy` names the challenge that failed |
 | Users stuck on an old build | `index.html` / `sw.js` served with a cache header — check `curl -sI https://app…/sw.js` |
 | API 502s right after `docker compose up -d backend` | Plone is still starting; unlike nginx, Caddy needs no restart afterwards (it re-resolves the upstream per dial) |
+| Statics load but every `/++api++` call 502s | the `reverse_proxy` upstream is wrong or unreachable — compare it against the Plone site's own conf, and check Zope is not bound to a different port or to loopback in another netns; `journalctl -u caddy` names the dial error |
 
 Separated layout only:
 
