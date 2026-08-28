@@ -23,8 +23,10 @@ const fixturesDir = join(
 
 // `unknown-node` is Python-only: TipTap's strict schema cannot produce
 // unknown nodes, so that fixture pins the *server's* defensive fallback
-// for documents written by future schema versions.
-const PYTHON_ONLY = new Set(['unknown-node']);
+// for documents written by future schema versions. `media-text-no-uid`
+// pins the server's fallback for a uid-less block, which the editor never
+// produces (matching travelImage, the JS side does not guard uid).
+const PYTHON_ONLY = new Set(['unknown-node', 'media-text-no-uid']);
 
 const names = readdirSync(fixturesDir)
   .filter((f) => f.endsWith('.json'))

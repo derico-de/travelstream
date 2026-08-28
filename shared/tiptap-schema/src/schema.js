@@ -55,6 +55,10 @@ const PICTURE_VARIANT_BY_SCALE = {
 const POSTER_SCALE = 'large';
 const GALLERY_TILE_SCALE = 'teaser';
 const GALLERY_LINK_SCALE = 'great';
+const MEDIA_TEXT_VARIANTS = ['image-left', 'image-right', 'image-top'];
+const DEFAULT_MEDIA_TEXT_VARIANT = 'image-left';
+
+export { PICTURE_VARIANT_BY_SCALE };
 
 /** resolveuid image figure with Plone scale URL. */
 export const TravelImage = Node.create({
@@ -203,6 +207,66 @@ export const TravelGallery = Node.create({
   }
 });
 
+/**
+ * Aurora-style image + rich text block. The image lives in attrs (same
+ * vocabulary as travelImage); the node content is the text side. The
+ * `variant` attr (image-left | image-right | image-top) is only a class —
+ * DOM order is constant (media figure first, body second) so switching the
+ * variant never restructures content; CSS grid places the columns.
+ * The outer element is a div, not a figure: figcaption must be a first or
+ * last child of its figure, so the caption lives in an inner figure.
+ */
+export const TravelMediaText = Node.create({
+  name: 'travelMediaText',
+  group: 'block',
+  content: '(paragraph | heading | bulletList | orderedList | blockquote)+',
+  isolating: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      uid: { default: null },
+      scale: { default: DEFAULT_IMAGE_SCALE },
+      alt: { default: '' },
+      caption: { default: null },
+      variant: { default: DEFAULT_MEDIA_TEXT_VARIANT }
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'div[data-travel-media-text]' }];
+  },
+
+  renderHTML({ node }) {
+    const { uid, alt, caption } = node.attrs;
+    /** @type {keyof typeof PICTURE_VARIANT_BY_SCALE} */
+    const scale = IMAGE_SCALES.includes(node.attrs.scale)
+      ? node.attrs.scale
+      : DEFAULT_IMAGE_SCALE;
+    const variant = MEDIA_TEXT_VARIANTS.includes(node.attrs.variant)
+      ? node.attrs.variant
+      : DEFAULT_MEDIA_TEXT_VARIANT;
+    const img = [
+      'img',
+      {
+        src: `resolveuid/${uid}/@@images/image/${scale}`,
+        alt: alt || '',
+        loading: 'lazy',
+        'data-picturevariant': PICTURE_VARIANT_BY_SCALE[scale]
+      }
+    ];
+    const media = caption
+      ? ['figure', { class: 'travel-media-text-media' }, img, ['figcaption', {}, caption]]
+      : ['figure', { class: 'travel-media-text-media' }, img];
+    return [
+      'div',
+      { class: `travel-media-text travel-media-text--${variant}` },
+      media,
+      ['div', { class: 'travel-media-text-body' }, 0]
+    ];
+  }
+});
+
 /** The full, constrained extension set for both editing surfaces. */
 export const travelExtensions = [
   Document,
@@ -235,5 +299,6 @@ export const travelExtensions = [
   HorizontalRule,
   TravelImage,
   TravelVideo,
-  TravelGallery
+  TravelGallery,
+  TravelMediaText
 ];

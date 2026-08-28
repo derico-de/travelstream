@@ -14,6 +14,7 @@
 import {
   TravelGallery,
   TravelImage,
+  TravelMediaText,
   TravelVideo,
   travelExtensions
 } from '@travelstream/tiptap-schema';
@@ -21,6 +22,7 @@ import { Extension } from '@tiptap/core';
 import type { NodeViewRenderer } from '@tiptap/core';
 import History from '@tiptap/extension-history';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
 import { cachedMedia, pickScale, resolveMedia, type MediaUrls } from '$lib/media';
 import type { GalleryItemRef } from './gallery';
@@ -124,6 +126,108 @@ const galleryNodeView: NodeViewRenderer = ({ node }) => {
 };
 
 /**
+ * Image + rich text block. The media half is presentation (attrs-driven,
+ * resolved like the other embeds); the body div is the contentDOM — the
+ * first content-hole node view in the app. `update` patches attrs changes
+ * (variant, caption, scale, image swap) in place so the body's editing
+ * state survives them.
+ */
+const mediaTextNodeView: NodeViewRenderer = ({ node, editor, getPos }) => {
+  const dom = document.createElement('div');
+  const media = document.createElement('figure');
+  media.className = 'travel-media-text-media';
+  const img = document.createElement('img');
+  img.loading = 'lazy';
+  media.appendChild(img);
+  const figcaption = document.createElement('figcaption');
+  const body = document.createElement('div');
+  body.className = 'travel-media-text-body';
+  dom.append(media, body);
+
+  // The media half is not editable content: a press selects the block,
+  // which surfaces the variant/scale controls in the toolbar.
+  media.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    const pos = typeof getPos === 'function' ? getPos() : undefined;
+    if (pos !== undefined) editor.commands.setNodeSelection(pos);
+  });
+
+  let shown = { uid: null as string | null, scale: null as string | null };
+
+  const sync = (current: typeof node) => {
+    const { uid, scale, alt, caption, variant } = current.attrs;
+    dom.className = `travel-media-text travel-media-text--${variant ?? 'image-left'}`;
+    img.alt = alt ?? '';
+    if (caption) {
+      figcaption.textContent = caption;
+      if (!figcaption.parentNode) media.appendChild(figcaption);
+    } else {
+      figcaption.remove();
+    }
+    if (uid && (uid !== shown.uid || scale !== shown.scale)) {
+      shown = { uid, scale };
+      applyMedia(img, uid, (target, urls) => {
+        const url = pickScale(urls, [scale ?? 'large', 'large', 'preview']);
+        if (url) (target as HTMLImageElement).src = url;
+      });
+    }
+  };
+  sync(node);
+
+  return {
+    dom,
+    contentDOM: body,
+    update(updated) {
+      if (updated.type !== node.type) return false;
+      sync(updated);
+      return true;
+    }
+  };
+};
+
+/**
+ * Editor-only hint on a media-text block whose body is still one empty
+ * paragraph: styled via .travel-media-text-placeholder::before. A node
+ * decoration, so it never touches document content.
+ */
+const mediaTextPlaceholderKey = new PluginKey('mediaTextPlaceholder');
+
+const MediaTextPlaceholder = Extension.create({
+  name: 'mediaTextPlaceholder',
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: mediaTextPlaceholderKey,
+        props: {
+          decorations(state) {
+            const decorations: Decoration[] = [];
+            state.doc.descendants((node, pos) => {
+              if (node.type.name !== TravelMediaText.name) return true;
+              const first = node.firstChild;
+              if (
+                node.childCount === 1 &&
+                first &&
+                first.type.name === 'paragraph' &&
+                first.content.size === 0
+              ) {
+                decorations.push(
+                  Decoration.node(pos + 1, pos + 1 + first.nodeSize, {
+                    class: 'travel-media-text-placeholder'
+                  })
+                );
+              }
+              return false;
+            });
+            return DecorationSet.create(state.doc, decorations);
+          }
+        }
+      })
+    ];
+  }
+});
+
+/**
  * Keep an (empty) paragraph at the end of the document whenever the last
  * node is an atom block (video, image, gallery). Without it there is no
  * text position after the embed, so tapping below it can't place a caret.
@@ -163,7 +267,12 @@ const TrailingParagraph = Extension.create({
   }
 });
 
-const TRAVEL_NODE_NAMES = new Set([TravelImage.name, TravelVideo.name, TravelGallery.name]);
+const TRAVEL_NODE_NAMES = new Set([
+  TravelImage.name,
+  TravelVideo.name,
+  TravelGallery.name,
+  TravelMediaText.name
+]);
 
 /** The shared schema with editor-only node views and behavior swapped in. */
 export const editorExtensions = [
@@ -171,8 +280,10 @@ export const editorExtensions = [
   TravelImage.extend({ addNodeView: () => imageNodeView }),
   TravelVideo.extend({ addNodeView: () => videoNodeView }),
   TravelGallery.extend({ addNodeView: () => galleryNodeView }),
+  TravelMediaText.extend({ addNodeView: () => mediaTextNodeView }),
   // Editor-only: undo/redo lives in the PWA, not the shared schema — the
   // schema is also used for static HTML generation where history is noise.
   History,
-  TrailingParagraph
+  TrailingParagraph,
+  MediaTextPlaceholder
 ];

@@ -1,0 +1,30 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "travelMediaText",
+      "attrs": {
+        "uid": "00112233445566770011223344556677",
+        "scale": "gigantic",
+        "alt": "Summit cairn",
+        "caption": "The top, finally",
+        "variant": "image-top"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "Six hours up, two down." }]
+        },
+        {
+          "type": "blockquote",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [{ "type": "text", "text": "Never again — until next year." }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

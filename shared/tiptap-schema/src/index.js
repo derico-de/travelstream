@@ -12,5 +12,12 @@
  * (see ticket 19).
  */
 
-export { travelExtensions, TravelImage, TravelVideo, TravelGallery } from './schema.js';
+export {
+  travelExtensions,
+  TravelImage,
+  TravelVideo,
+  TravelGallery,
+  TravelMediaText,
+  PICTURE_VARIANT_BY_SCALE
+} from './schema.js';
 export { renderToHTML } from './render.js';

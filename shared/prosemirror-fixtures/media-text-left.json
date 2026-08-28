@@ -1,0 +1,47 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "travelMediaText",
+      "attrs": {
+        "uid": "0123456789abcdef0123456789abcdef",
+        "scale": "teaser",
+        "alt": "Harbour at dusk",
+        "caption": "Husavik harbour",
+        "variant": "image-left"
+      },
+      "content": [
+        {
+          "type": "heading",
+          "attrs": { "level": 3 },
+          "content": [{ "type": "text", "text": "Whale watching" }]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "We booked the " },
+            { "type": "text", "text": "early", "marks": [{ "type": "italic" }] },
+            { "type": "text", "text": " boat." }
+          ]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Humpback" }] }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Minke" }] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

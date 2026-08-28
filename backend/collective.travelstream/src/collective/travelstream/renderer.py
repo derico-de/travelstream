@@ -34,6 +34,8 @@ PICTURE_VARIANT_BY_SCALE = {
 POSTER_SCALE = "large"
 GALLERY_TILE_SCALE = "teaser"
 GALLERY_LINK_SCALE = "great"
+MEDIA_TEXT_VARIANTS = {"image-left", "image-right", "image-top"}
+DEFAULT_MEDIA_TEXT_VARIANT = "image-left"
 
 _MARK_TAGS = {
     "bold": "strong",
@@ -168,6 +170,36 @@ def _travel_gallery(node):
     )
 
 
+def _travel_media_text(node):
+    # Aurora-style image + rich text block. DOM order is constant (media
+    # figure first, body second) in every variant; the variant is only a
+    # class and CSS grid places the columns. The outer element is a div —
+    # figcaption must be a first/last child of its figure, so the caption
+    # lives in an inner figure.
+    attrs = node.get("attrs") or {}
+    uid = _esc(attrs.get("uid") or "")
+    if not uid:
+        return _unknown(node)
+    scale = attrs.get("scale")
+    if scale not in IMAGE_SCALES:
+        scale = DEFAULT_IMAGE_SCALE
+    variant = attrs.get("variant")
+    if variant not in MEDIA_TEXT_VARIANTS:
+        variant = DEFAULT_MEDIA_TEXT_VARIANT
+    alt = _esc(attrs.get("alt") or "")
+    src = f"resolveuid/{uid}/@@images/image/{scale}"
+    picture_variant = PICTURE_VARIANT_BY_SCALE[scale]
+    caption = attrs.get("caption")
+    caption_html = f"<figcaption>{_esc(caption)}</figcaption>" if caption else ""
+    return (
+        f'<div class="travel-media-text travel-media-text--{variant}">'
+        f'<figure class="travel-media-text-media">'
+        f'<img src="{src}" alt="{alt}" loading="lazy" data-picturevariant="{picture_variant}">'
+        f"{caption_html}</figure>"
+        f'<div class="travel-media-text-body">{_children(node)}</div></div>'
+    )
+
+
 def _unknown(node):
     node_type = _esc(node.get("type") or "")
     return (
@@ -189,6 +221,7 @@ _RENDERERS = {
     "travelImage": _travel_image,
     "travelVideo": _travel_video,
     "travelGallery": _travel_gallery,
+    "travelMediaText": _travel_media_text,
 }
 
 
@@ -231,7 +264,7 @@ def extract_media_uids(doc):
             return
         node_type = node.get("type")
         attrs = node.get("attrs") or {}
-        if node_type in ("travelImage", "travelVideo"):
+        if node_type in ("travelImage", "travelVideo", "travelMediaText"):
             add(attrs.get("uid"))
         elif node_type == "travelGallery":
             items = attrs.get("items")

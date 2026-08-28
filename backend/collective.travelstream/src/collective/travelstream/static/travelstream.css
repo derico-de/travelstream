@@ -17,6 +17,51 @@ figure.travel-gallery .travel-gallery-item-video {
   display: block;
 }
 
+/* Image + text block: grid, never floats. DOM order is constant (media
+   figure first, body second); the variant class only re-places the
+   columns, so switching variants never restructures content. */
+div.travel-media-text {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 1rem;
+  align-items: start;
+  margin: 1rem 0;
+}
+
+div.travel-media-text--image-right {
+  grid-template-columns: 3fr 2fr;
+}
+
+div.travel-media-text--image-right .travel-media-text-media {
+  order: 2;
+}
+
+div.travel-media-text--image-top {
+  grid-template-columns: 1fr;
+}
+
+div.travel-media-text .travel-media-text-media {
+  margin: 0;
+}
+
+/* The img may sit inside a <picture> after PictureVariantsFilter — the
+   descendant selector covers both. */
+div.travel-media-text .travel-media-text-media img {
+  width: 100%;
+  height: auto;
+}
+
+/* Narrow screens: every variant collapses to the image-top layout.
+   Same specificity as the variant rules above — source order wins. */
+@media (max-width: 40em) {
+  div.travel-media-text {
+    grid-template-columns: 1fr;
+  }
+  div.travel-media-text .travel-media-text-media {
+    order: 0;
+  }
+}
+
 /* Centered play disc: videos must be unmissable among photo tiles. */
 figure.travel-gallery .travel-gallery-play {
   position: absolute;

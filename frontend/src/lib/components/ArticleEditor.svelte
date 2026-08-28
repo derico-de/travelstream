@@ -12,6 +12,7 @@
     toDatetimeLocal
   } from '$lib/format';
   import type { ImageFieldScales, PublishResponse } from '$lib/api/types';
+  import { PICTURE_VARIANT_BY_SCALE } from '@travelstream/tiptap-schema';
   import TagsInput from './TagsInput.svelte';
   import TimelinePicker from './TimelinePicker.svelte';
   import { editorExtensions } from './editorExtensions';
@@ -35,8 +36,9 @@
   let editorElement = $state<HTMLElement | null>(null);
   let editor = $state<Editor | null>(null);
   // 'embed' = legacy single pick; 'gallery' = new multi-select insert;
-  // 'gallery-edit' = reopen with the selected gallery's items.
-  let picker = $state<'closed' | 'embed' | 'gallery' | 'gallery-edit'>('closed');
+  // 'gallery-edit' = reopen with the selected gallery's items;
+  // 'media-text' = single pick for the image + text block.
+  let picker = $state<'closed' | 'embed' | 'gallery' | 'gallery-edit' | 'media-text'>('closed');
   let flash = $state('');
   let error = $state('');
   let saving = $state(false);
@@ -54,9 +56,23 @@
     blockquote: false,
     link: false,
     gallery: false,
+    mediaText: false,
+    mediaTextVariant: '',
+    mediaTextSize: 'large',
     canUndo: false,
     canRedo: false
   });
+
+  // The block stores a raw scale, but the user chooses a picture variant
+  // (the plone.picture_variants registry: small/medium/large). Writing the
+  // variant's canonical source scale keeps the document vocabulary
+  // unchanged; the registry renders small from "preview", medium from
+  // "teaser", large from "larger".
+  const SCALE_BY_PICTURE_VARIANT: Record<string, string> = {
+    small: 'preview',
+    medium: 'teaser',
+    large: 'larger'
+  };
 
   let capturedAt = $state('');
   let title = $state('');
@@ -116,6 +132,7 @@
       extensions: editorExtensions,
       content: article.prosemirror_doc ?? { type: 'doc', content: [] },
       onTransaction: ({ editor: e }) => {
+        const mediaTextAttrs = e.getAttributes('travelMediaText');
         active = {
           bold: e.isActive('bold'),
           italic: e.isActive('italic'),
@@ -126,6 +143,12 @@
           blockquote: e.isActive('blockquote'),
           link: e.isActive('link'),
           gallery: e.isActive('travelGallery'),
+          mediaText: e.isActive('travelMediaText'),
+          mediaTextVariant: (mediaTextAttrs.variant as string) ?? '',
+          mediaTextSize:
+            (PICTURE_VARIANT_BY_SCALE as Record<string, string>)[
+              mediaTextAttrs.scale as string
+            ] ?? 'large',
           canUndo: e.can().undo(),
           canRedo: e.can().redo()
         };
@@ -139,7 +162,11 @@
   function embeddedUids(doc: object): string[] {
     const uids = new Set<string>();
     const walk = (node: Record<string, unknown>) => {
-      if (node.type === 'travelImage' || node.type === 'travelVideo') {
+      if (
+        node.type === 'travelImage' ||
+        node.type === 'travelVideo' ||
+        node.type === 'travelMediaText'
+      ) {
         const attrs = node.attrs as { uid?: string } | undefined;
         if (attrs?.uid) uids.add(attrs.uid);
       }
@@ -235,6 +262,27 @@
           };
     editor.chain().focus().insertContent(node).run();
     picker = 'closed';
+  }
+
+  function insertMediaText(item: import('$lib/api/types').TimelineItem) {
+    if (!editor) return;
+    const node = {
+      type: 'travelMediaText',
+      attrs: {
+        uid: item.UID,
+        scale: 'large',
+        alt: item.title,
+        caption: null,
+        variant: 'image-left'
+      },
+      content: [{ type: 'paragraph' }]
+    };
+    editor.chain().focus().insertContent(node).run();
+    picker = 'closed';
+  }
+
+  function setMediaTextAttr(attrs: { variant?: string; scale?: string }) {
+    editor?.chain().focus().updateAttributes('travelMediaText', attrs).run();
   }
 
   /** Items of the currently selected gallery node (for gallery-edit mode). */
@@ -403,6 +451,39 @@
         {:else}
           <button onclick={() => (picker = 'gallery')}>🖼 Gallery</button>
         {/if}
+        <button onclick={() => (picker = 'media-text')}>◧ Image + text</button>
+        {#if active.mediaText}
+          <span class="media-text-controls" role="group" aria-label="Image and text layout">
+            <button
+              aria-label="Image left"
+              class:on={active.mediaTextVariant === 'image-left'}
+              onclick={() => setMediaTextAttr({ variant: 'image-left' })}>◧</button
+            >
+            <button
+              aria-label="Image right"
+              class:on={active.mediaTextVariant === 'image-right'}
+              onclick={() => setMediaTextAttr({ variant: 'image-right' })}>◨</button
+            >
+            <button
+              aria-label="Image above"
+              class:on={active.mediaTextVariant === 'image-top'}
+              onclick={() => setMediaTextAttr({ variant: 'image-top' })}>⬒</button
+            >
+            <!-- stopPropagation: the toolbar's mousedown preventDefault
+                 (focus-keeping) would stop the select from opening. -->
+            <select
+              aria-label="Image size"
+              value={active.mediaTextSize}
+              onmousedown={(event) => event.stopPropagation()}
+              onchange={(event) =>
+                setMediaTextAttr({ scale: SCALE_BY_PICTURE_VARIANT[event.currentTarget.value] })}
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </span>
+        {/if}
       </div>
     {/if}
 
@@ -437,6 +518,12 @@
     <TimelinePicker
       path={tripPath}
       onpick={insertEmbed}
+      onclose={() => (picker = 'closed')}
+    />
+  {:else if picker === 'media-text'}
+    <TimelinePicker
+      path={tripPath}
+      onpick={insertMediaText}
       onclose={() => (picker = 'closed')}
     />
   {:else if picker === 'gallery' || picker === 'gallery-edit'}
@@ -612,6 +699,21 @@
     opacity: 0.4;
     cursor: default;
   }
+  .media-text-controls {
+    display: inline-flex;
+    gap: 0.3rem;
+    align-items: center;
+    padding-left: 0.3rem;
+    border-left: 1px solid #b8c0cc;
+  }
+  .media-text-controls select {
+    font: inherit;
+    min-height: 2.2rem;
+    padding: 0.35rem 0.3rem;
+    border-radius: 6px;
+    border: 1px solid #b8c0cc;
+    background: white;
+  }
   .surface {
     background: white;
     border-radius: 10px;
@@ -672,6 +774,53 @@
   .surface :global(.ProseMirror-selectednode) {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+  }
+  /* Image + text block: grid, never floats. DOM order is constant (media
+     first); the variant class only re-places the columns. */
+  .surface :global(.travel-media-text) {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: 0.8rem;
+    align-items: start;
+    margin: 1rem 0;
+  }
+  .surface :global(.travel-media-text--image-right) {
+    grid-template-columns: 3fr 2fr;
+  }
+  .surface :global(.travel-media-text--image-right .travel-media-text-media) {
+    order: 2;
+  }
+  .surface :global(.travel-media-text--image-top) {
+    grid-template-columns: 1fr;
+  }
+  .surface :global(.travel-media-text .travel-media-text-media) {
+    margin: 0;
+    cursor: pointer;
+  }
+  .surface :global(.travel-media-text-media img) {
+    display: block;
+    width: 100%;
+  }
+  .surface :global(.travel-media-text-media figcaption) {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: #5a6676;
+  }
+  .surface :global(.travel-media-text-body > :first-child) { margin-top: 0; }
+  .surface :global(.travel-media-text-placeholder::before) {
+    content: 'Write next to this photo…';
+    color: #9aa4b2;
+    pointer-events: none;
+  }
+  /* Narrow screens: every variant collapses to the image-top layout.
+     Same specificity as the variant rules — source order wins. */
+  @media (max-width: 40rem) {
+    .surface :global(.travel-media-text) {
+      grid-template-columns: 1fr;
+    }
+    .surface :global(.travel-media-text .travel-media-text-media) {
+      order: 0;
+    }
   }
   .actions {
     display: flex;

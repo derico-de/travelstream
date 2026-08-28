@@ -56,12 +56,37 @@ class TestGoldenFixtures:
 
     @pytest.mark.parametrize(
         "name",
-        ["basic", "lists-quote", "media", "gallery", "gallery-empty", "unknown-node"],
+        [
+            "basic",
+            "lists-quote",
+            "media",
+            "gallery",
+            "gallery-empty",
+            "unknown-node",
+            "media-text-left",
+            "media-text-right",
+            "media-text-top",
+            "media-text-no-uid",
+        ],
     )
     def test_fixture(self, name):
         doc = json.loads((FIXTURES_DIR / f"{name}.json").read_text())
         expected = (FIXTURES_DIR / f"{name}.html").read_text().strip()
         assert render_document(doc) == expected
+
+    def test_media_text_uid_extracted(self):
+        from collective.travelstream.renderer import extract_media_uids
+
+        doc = json.loads((FIXTURES_DIR / "media-text-left.json").read_text())
+        assert extract_media_uids(doc) == ["0123456789abcdef0123456789abcdef"]
+
+    def test_media_text_caption_and_body_searchable(self):
+        from collective.travelstream.renderer import extract_text
+
+        doc = json.loads((FIXTURES_DIR / "media-text-left.json").read_text())
+        text = extract_text(doc)
+        assert "Husavik harbour" in text
+        assert "Whale watching" in text
 
 
 class TestArticleRendering:
